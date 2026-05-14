@@ -1,54 +1,69 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { JamProvider } from './JamContext';
 import JamMenu from './components/JamMenu';
 import './styles.css';
 
 async function main() {
-  while (!Spicetify?.showNotification || !Spicetify?.Platform) {
+  while (!Spicetify?.showNotification || !Spicetify?.Platform || !Spicetify?.Playbar) {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  const sidebar = document.createElement('div');
-  sidebar.id = 'jam-sidebar';
-  document.body.appendChild(sidebar);
+  // Ensure sidebar exists only once
+  let sidebar = document.getElementById('jam-sidebar');
+  if (!sidebar) {
+    sidebar = document.createElement('div');
+    sidebar.id = 'jam-sidebar';
+    document.body.appendChild(sidebar);
+  }
 
   let isOpen = false;
 
-  const open  = () => { isOpen = true;  sidebar.classList.add('jam-sidebar-visible'); updateBtn(); };
-  const close = () => { isOpen = false; sidebar.classList.remove('jam-sidebar-visible'); updateBtn(); };
+  const updateBtn = () => {
+    if (playbarBtn) {
+        playbarBtn.active = isOpen;
+    }
+  };
+
+  const open  = () => { 
+    isOpen = true;  
+    sidebar?.classList.add('jam-sidebar-visible'); 
+    updateBtn(); 
+  };
+  const close = () => { 
+    isOpen = false; 
+    sidebar?.classList.remove('jam-sidebar-visible'); 
+    updateBtn(); 
+  };
   const toggle = () => isOpen ? close() : open();
 
   const jamSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
 
-  const createJamButton = () => {
-    if (document.getElementById('jam-bottom-button')) return;
-    const bar = document.querySelector('.main-nowPlayingBar-extraControls, .main-nowPlayingBar-right');
-    if (!bar) { setTimeout(createJamButton, 500); return; }
-
-    const btn = document.createElement('button');
-    btn.id = 'jam-bottom-button';
-    btn.className = 'jam-topbar-btn';
-    btn.innerHTML = jamSvg;
-    btn.title = 'Spicetify Jam';
-    btn.onclick = toggle;
-    bar.insertBefore(btn, bar.firstChild);
-  };
-
-  const updateBtn = () => {
-    const btn = document.getElementById('jam-bottom-button');
-    if (!btn) return;
-    btn.classList.toggle('jam-topbar-btn-active', isOpen);
-  };
-
-  createJamButton();
-
-  Spicetify.ReactDOM.render(
-    <JamProvider>
-      <JamMenu onClose={close} />
-    </JamProvider>,
-    sidebar
+  // Use Spicetify Playbar API instead of manual DOM injection
+  // This prevents React re-render crashes in the playbar
+  const playbarBtn = new Spicetify.Playbar.Button(
+    'Spicetify Jam',
+    jamSvg,
+    toggle
   );
+
+  // Register the button
+  playbarBtn.register();
+
+  if ((Spicetify.ReactDOM as any).createRoot) {
+    (Spicetify.ReactDOM as any).createRoot(sidebar).render(
+      <JamProvider>
+        <JamMenu onClose={close} />
+      </JamProvider>
+    );
+  } else {
+    Spicetify.ReactDOM.render(
+      <JamProvider>
+        <JamMenu onClose={close} />
+      </JamProvider>,
+      sidebar
+    );
+  }
 }
 
 export default main;
