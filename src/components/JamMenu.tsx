@@ -185,6 +185,34 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     </div>
                 )}
 
+                {j.isHost && (
+                    <div className="jam-section-card">
+                        <div className="jam-section-title">INVITE</div>
+                        <div className="jam-id-row">
+                            <span className="jam-id-code">{j.jamId}</span>
+                            <button
+                                className={`jam-icon-btn ${copied ? 'green' : ''}`}
+                                onClick={() => { copy(j.jamId, 'Copied!'); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                            >{copied ? I.check : I.copy}</button>
+                        </div>
+                        <div className="jam-share-row">
+                            <button className="jam-btn outline flex-1"
+                                onClick={() => copy(`${window.location.origin}${window.location.pathname}#jam=${j.jamId}`, 'Link copied!')}>
+                                {I.link} Copy Link
+                            </button>
+                            <button className="jam-btn outline flex-1" onClick={() => setShowQr(v => !v)}>
+                                {I.qr} {showQr ? 'Hide QR' : 'QR Code'}
+                            </button>
+                        </div>
+                        {showQr && qrUrl && (
+                            <div className="jam-qr-box">
+                                <img src={qrUrl} alt="QR"/>
+                                <div className="jam-qr-label">Scan to join</div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {j.queue.length > 0 && (
                     <div className="jam-section-card">
                         <div className="jam-section-title">{I.queue} UP NEXT · {j.queue.length}</div>
@@ -239,34 +267,6 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         </div>
                     ))}
                 </div>
-
-                {j.isHost && (
-                    <div className="jam-section-card">
-                        <div className="jam-section-title">INVITE</div>
-                        <div className="jam-id-row">
-                            <span className="jam-id-code">{j.jamId}</span>
-                            <button
-                                className={`jam-icon-btn ${copied ? 'green' : ''}`}
-                                onClick={() => { copy(j.jamId, 'Copied!'); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                            >{copied ? I.check : I.copy}</button>
-                        </div>
-                        <div className="jam-share-row">
-                            <button className="jam-btn outline flex-1"
-                                onClick={() => copy(`${window.location.origin}${window.location.pathname}#jam=${j.jamId}`, 'Link copied!')}>
-                                {I.link} Copy Link
-                            </button>
-                            <button className="jam-btn outline flex-1" onClick={() => setShowQr(v => !v)}>
-                                {I.qr} {showQr ? 'Hide QR' : 'QR Code'}
-                            </button>
-                        </div>
-                        {showQr && qrUrl && (
-                            <div className="jam-qr-box">
-                                <img src={qrUrl} alt="QR"/>
-                                <div className="jam-qr-label">Scan to join</div>
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
 
             <div className="jam-footer">

@@ -161,7 +161,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const memberRegistry = useRef<Map<string, {name: string, image: string}>>(new Map());
     const cachedUser = useRef<{ name: string; image: string }>({ name: 'Listener', image: '' });
     const userPromise = useRef<Promise<{ name: string; image: string }> | null>(null);
-    const refs = useRef({ isHost: false, connected: false, guestControls: false, jamId: '', targetUri: null as string | null, ignoreSync: false, isPlaying: false });
+    const refs = useRef({ isHost: false, connected: false, guestControls: false, jamId: '', targetUri: null as string | null, ignoreSync: false, isPlaying: false, forcingPause: false });
     const cmdThrottle = useRef<Map<string, number>>(new Map());
     const lastHostMsg = useRef(0);
     const reconnectAttempt = useRef(0);
@@ -226,6 +226,11 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     setDuration(Spicetify.Player.getDuration());
                 } catch {}
             } else if (refs.current.connected) {
+                // Update progress/duration from local player for seek bar
+                try {
+                    setProgress(Spicetify.Player.getProgress());
+                    setDuration(Spicetify.Player.getDuration());
+                } catch {}
                 const c = hostConn(); if (c?.open) c.send({ type: 'PING', ts: Date.now() });
                 if (lastHostMsg.current > 0 && Date.now() - lastHostMsg.current > 10000) {
                     setError('Connection lost - trying to reconnect...');
@@ -480,10 +485,12 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             case 'PLAY':
                 if (!r.isHost) {
                     const curUri = Spicetify.Player.data?.item?.uri;
+                    const trackChanged = curUri !== d.uri;
                     r.targetUri = d.uri;
+                    if (trackChanged) setProgress(0);
                     if (d.paused) {
                         // Host is paused — update track info but don't start playing
-                        if (curUri !== d.uri) {
+                        if (trackChanged) {
                             // Different track: load it then immediately pause
                             r.ignoreSync = true;
                             setIsPlaying(false);
@@ -494,7 +501,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             Spicetify.Player.pause();
                             setIsPlaying(false);
                         }
-                    } else if (curUri === d.uri) {
+                    } else if (!trackChanged) {
                         const delay = Date.now() - d.ts;
                         Spicetify.Player.seek(d.pos + delay);
                         setIsPlaying(true);
@@ -722,9 +729,12 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             } else {
                 if (playing) {
                     if (!refs.current.guestControls) {
-                        // Listener tried to resume without guest controls — force pause immediately
+                        // Guard against re-entrant pause loop
+                        if (refs.current.forcingPause) return;
+                        refs.current.forcingPause = true;
                         Spicetify.Player.pause();
                         Spicetify.showNotification('🔒 Only the host can resume playback');
+                        setTimeout(() => { refs.current.forcingPause = false; }, 500);
                         const c = hostConn();
                         if (c?.open) c.send({ type: 'SYNC' });
                     } else {
