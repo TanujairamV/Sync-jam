@@ -483,7 +483,17 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     r.targetUri = d.uri;
                     if (d.paused) {
                         // Host is paused — update track info but don't start playing
-                        setIsPlaying(false);
+                        if (curUri !== d.uri) {
+                            // Different track: load it then immediately pause
+                            r.ignoreSync = true;
+                            setIsPlaying(false);
+                            Spicetify.Player.playUri(d.uri).then(() => {
+                                setTimeout(() => { Spicetify.Player.pause(); r.ignoreSync = false; }, 150);
+                            }).catch(() => { r.ignoreSync = false; });
+                        } else {
+                            Spicetify.Player.pause();
+                            setIsPlaying(false);
+                        }
                     } else if (curUri === d.uri) {
                         const delay = Date.now() - d.ts;
                         Spicetify.Player.seek(d.pos + delay);
@@ -711,22 +721,25 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 }
             } else {
                 if (playing) {
-                    const c = hostConn();
-                    if (c?.open) c.send({ type: 'SYNC' });
-                    
-                    if (refs.current.targetUri && !refs.current.guestControls) {
-                        const curUri = Spicetify.Player.data?.item?.uri;
-                        if (curUri && curUri !== refs.current.targetUri) {
-                            refs.current.ignoreSync = true;
-                            Spicetify.Player.playUri(refs.current.targetUri).catch(() => {
-                                refs.current.ignoreSync = false;
-                            });
-                            Spicetify.showNotification('🔒 Locked to Jam');
-                        }
-                    }
-                } else {
                     if (!refs.current.guestControls) {
-                        Spicetify.showNotification('⏸️ Jam is still playing - resume to sync');
+                        // Listener tried to resume without guest controls — force pause immediately
+                        Spicetify.Player.pause();
+                        Spicetify.showNotification('🔒 Only the host can resume playback');
+                        const c = hostConn();
+                        if (c?.open) c.send({ type: 'SYNC' });
+                    } else {
+                        const c = hostConn();
+                        if (c?.open) c.send({ type: 'SYNC' });
+                        if (refs.current.targetUri) {
+                            const curUri = Spicetify.Player.data?.item?.uri;
+                            if (curUri && curUri !== refs.current.targetUri) {
+                                refs.current.ignoreSync = true;
+                                Spicetify.Player.playUri(refs.current.targetUri).catch(() => {
+                                    refs.current.ignoreSync = false;
+                                });
+                                Spicetify.showNotification('🔒 Locked to Jam');
+                            }
+                        }
                     }
                 }
             }
