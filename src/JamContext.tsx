@@ -443,7 +443,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     gc: r.guestControls, playing: Spicetify.Player.isPlaying(), members: all,
                     progress: Spicetify.Player.getProgress(), duration: Spicetify.Player.getDuration()
                 });
-                if (Spicetify.Player.data?.item) conn.send({ type: 'PLAY', uri: Spicetify.Player.data.item.uri, pos: Spicetify.Player.getProgress(), ts: Date.now() });
+                if (Spicetify.Player.data?.item) conn.send({ type: 'PLAY', uri: Spicetify.Player.data.item.uri, pos: Spicetify.Player.getProgress(), ts: Date.now(), paused: !Spicetify.Player.isPlaying() });
                 broadcast({ type: 'MEMBERS', members: all });
                 break;
             case 'INIT':
@@ -481,7 +481,10 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (!r.isHost) {
                     const curUri = Spicetify.Player.data?.item?.uri;
                     r.targetUri = d.uri;
-                    if (curUri === d.uri) {
+                    if (d.paused) {
+                        // Host is paused — update track info but don't start playing
+                        setIsPlaying(false);
+                    } else if (curUri === d.uri) {
                         const delay = Date.now() - d.ts;
                         Spicetify.Player.seek(d.pos + delay);
                         setIsPlaying(true);
@@ -510,7 +513,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             case 'Q': setQueue(d.queue); break;
             case 'PING': conn.send({ type: 'PONG', ts: d.ts }); break;
             case 'PONG': setPing(Date.now() - d.ts); break;
-            case 'SYNC': if (r.isHost && Spicetify.Player.data?.item) conn.send({ type: 'PLAY', uri: Spicetify.Player.data.item.uri, pos: Spicetify.Player.getProgress(), ts: Date.now(), np: getTrack() }); break;
+            case 'SYNC': if (r.isHost && Spicetify.Player.data?.item) conn.send({ type: 'PLAY', uri: Spicetify.Player.data.item.uri, pos: Spicetify.Player.getProgress(), ts: Date.now(), np: getTrack(), paused: !Spicetify.Player.isPlaying() }); break;
         }
     }, [broadcast, leaveJam, addToQueue, removeFromQueue, buildMembers]);
 
@@ -562,17 +565,37 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const p = new Peer(PEER_CONFIG); 
         peerRef.current = p;
         return new Promise<void>((res, rej) => {
+            let settled = false;
+            const timeout = setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    p.destroy();
+                    const msg = 'Connection timed out — check the Jam ID and try again';
+                    setError(msg);
+                    rej(new Error(msg));
+                }
+            }, 10000);
+
+            const settle = (fn: () => void) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeout);
+                fn();
+            };
+
             p.on('open', () => {
                 const conn = p.connect(cleanId);
                 conn.on('open', () => {
-                    conns.current.set(cleanId, conn); 
-                    setJamId(cleanId); 
-                    setIsHost(false); 
-                    setConnected(true); 
-                    setError(null);
-                    setMembers([{ id: cleanId, name: 'Host', isHost: true }, { id: 'me', name: me.name, image: me.image }]);
-                    conn.send({ type: 'JOIN', name: me.name, image: me.image }); 
-                    res();
+                    settle(() => {
+                        conns.current.set(cleanId, conn); 
+                        setJamId(cleanId); 
+                        setIsHost(false); 
+                        setConnected(true); 
+                        setError(null);
+                        setMembers([{ id: cleanId, name: 'Host', isHost: true }, { id: 'me', name: me.name, image: me.image }]);
+                        conn.send({ type: 'JOIN', name: me.name, image: me.image }); 
+                        res();
+                    });
                 });
                 conn.on('data', (d: any) => onData(d, conn));
                 conn.on('close', () => {
@@ -605,12 +628,31 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                 }, reconnectAttempt.current * 2000);
                             }
                         });
-                        newConn.on('error', () => { if (reconnectAttempt.current < 3) { /* handled by close */ } else { leaveJam(); setError('Could not reconnect'); } });
+                        newConn.on('error', (e: any) => {
+                            if (reconnectAttempt.current >= 3) {
+                                leaveJam();
+                                setError(`Reconnection error: ${e?.type || e?.message || 'unknown'}`);
+                            }
+                        });
                     }, reconnectAttempt.current * 1500);
                 });
-                conn.on('error', () => { setError('Could not connect'); rej(); });
+                conn.on('error', (e: any) => {
+                    settle(() => {
+                        const msg = `Could not connect to Jam: ${e?.type || e?.message || 'connection error'}`;
+                        setError(msg);
+                        rej(new Error(msg));
+                    });
+                });
             });
-            p.on('error', e => { setError(`Error: ${(e as any).type}`); rej(e); });
+            p.on('error', (e: any) => {
+                settle(() => {
+                    const msg = e?.type === 'peer-unavailable'
+                        ? 'Jam not found — check the ID and try again'
+                        : `Peer error: ${e?.type || e?.message || 'unknown'}`;
+                    setError(msg);
+                    rej(new Error(msg));
+                });
+            });
         });
     };
 
@@ -622,8 +664,9 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const uri = Spicetify.Player.data?.item?.uri;
                 if (refs.current.isHost) {
                     const t = getTrack(); if (t) setNowPlaying(t);
-                    refs.current.targetUri = uri || null; 
-                    broadcast({ type: 'PLAY', uri: uri || '', pos: 0, ts: Date.now(), np: t });
+                    refs.current.targetUri = uri || null;
+                    const hostPaused = !Spicetify.Player.isPlaying();
+                    broadcast({ type: 'PLAY', uri: uri || '', pos: 0, ts: Date.now(), np: t, paused: hostPaused });
                     if (pendingQueueRestore.current.length > 0) {
                         const restore = pendingQueueRestore.current;
                         pendingQueueRestore.current = [];
