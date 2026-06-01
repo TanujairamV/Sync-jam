@@ -16,6 +16,10 @@
     "spicetify-creator": "^1.0.17"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.1.2",
+    "@mui/material": "^7.1.2",
     "lucide-react": "^1.7.0",
     "peerjs": "^1.5.5",
     "qrcode": "^1.5.4"
