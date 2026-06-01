@@ -14,7 +14,7 @@ const COLORS = [
 const I = {
     close:    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M2.47 2.47a.75.75 0 011.06 0L8 6.94l4.47-4.47a.75.75 0 111.06 1.06L9.06 8l4.47 4.47a.75.75 0 11-1.06 1.06L8 9.06l-4.47 4.47a.75.75 0 01-1.06-1.06L6.94 8 2.47 3.53a.75.75 0 010-1.06z"/></svg>,
     people:   <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 2a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM4 4.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM10.5 3a2 2 0 100 4 2 2 0 000-4z"/></svg>,
-    copy:     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 6.5V12a1.5 1.5 0 001.5 1.5H10A1.5 1.5 0 0011.5 12V6.5A1.5 1.5 0 0010 5H5.5A1.5 1.5 0 004 6.5z"/></svg>,
+    copy:     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
     check:    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.985 2.383L5.127 12.754 1.388 8.375l-.766.663 4.5 5.2 9.638-11.29-.766-.654z"/></svg>,
     qr:       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v6H1V1zm2 2v2h2V3H3zm6-2h6v6H9V1zm2 2v2h2V3h-2zM1 9h6v6H1V9zm2 2v2h2v-2H3z"/></svg>,
     leave:    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3.5 2A1.5 1.5 0 002 3.5v9A1.5 1.5 0 003.5 14H7v-1H3.5a.5.5 0 01-.5-.5v-9a.5.5 0 01.5-.5H7V2H3.5zM10.354 4.646a.5.5 0 00-.708.708L12.293 8H6v1h6.293l-2.647 2.646a.5.5 0 10.708.708l3.5-3.5a.5.5 0 000-.708l-3.5-3.5z"/></svg>,
