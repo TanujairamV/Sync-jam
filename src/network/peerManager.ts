@@ -106,6 +106,17 @@ export const startJam = async (params: {
 
         p.on('connection', conn => {
             console.log('[HOST] Incoming connection from:', conn.peer)
+            conn.on('open', () => {
+                console.log('[HOST] RAW OPEN', conn.peer)
+            })
+
+            conn.on('error', e => {
+                console.error('[HOST] RAW ERROR', e)
+            })
+
+            conn.on('close', () => {
+                console.warn('[HOST] RAW CLOSE', conn.peer)
+            })
             params.setupConn(conn)
         })
 
@@ -195,7 +206,9 @@ export const joinJam = async (params: {
             console.log('[GUEST] Peer opened')
             console.log('[GUEST] Peer ID:', id)
 
-            const conn = p.connect(cleanId)
+            const conn = p.connect(cleanId, {
+                reliable: true
+            })
 
             console.log('[GUEST] connect() called')
             console.log('[GUEST] Connecting to:', cleanId)
