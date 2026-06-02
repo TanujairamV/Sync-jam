@@ -162,7 +162,7 @@ export const joinJam = async (params: {
     console.log('[GUEST] User:', me.name)
     console.log('[GUEST] Room ID:', cleanId)
 
-    const p = new Peer(PEER_CONFIG)
+    const p = new Peer(undefined, PEER_CONFIG)
 
     return new Promise<Peer>((res, rej) => {
         let settled = false
