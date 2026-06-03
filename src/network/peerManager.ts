@@ -106,6 +106,11 @@ export const startJam = async (params: {
 
         p.on('connection', conn => {
             console.log('[HOST] Incoming connection from:', conn.peer)
+
+            console.log('[HOST] connection object', conn)
+            console.log('[HOST] connectionId', (conn as any).connectionId)
+            console.log('[HOST] options', (conn as any).options)
+
             conn.on('open', () => {
                 console.log('[HOST] RAW OPEN', conn.peer)
             })
@@ -117,6 +122,17 @@ export const startJam = async (params: {
             conn.on('close', () => {
                 console.warn('[HOST] RAW CLOSE', conn.peer)
             })
+            setTimeout(() => {
+                console.log(
+                    '[HOST] payload after 3s',
+                    (conn as any).options?._payload
+                )
+
+                console.log(
+                    '[HOST] open after 3s',
+                    conn.open
+                )
+            }, 3000)
             params.setupConn(conn)
         })
 
@@ -207,8 +223,13 @@ export const joinJam = async (params: {
             console.log('[GUEST] Peer ID:', id)
 
             const conn = p.connect(cleanId, {
-                reliable: true
+                reliable: true,
+                serialization: 'binary'
             })
+            console.log('[GUEST] provider:', (conn as any).provider)
+            console.log('[GUEST] connectionId:', (conn as any).connectionId)
+            console.log('[GUEST] options:', (conn as any).options)
+
             const iceLogger = setInterval(() => {
                 try {
                     const pc = (conn as any)?._negotiator?._pc
@@ -228,7 +249,7 @@ export const joinJam = async (params: {
                     console.error('[GUEST ICE] Error', e)
                 }
             }, 2000)
-            
+
             console.log('[GUEST] connect() called')
             console.log('[GUEST] Connecting to:', cleanId)
             console.log('[GUEST] Connection object:', conn)
