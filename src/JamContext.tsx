@@ -4,6 +4,7 @@ import { fetchUserAsync, getTrack, getQueue } from './spotify/player'
 import { setupConn as networkSetupConn, startJam as networkStartJam, joinJam as networkJoinJam } from './network/peerManager'
 import { WebRTCPeerManager } from './network/WebRTCPeerManager'
 import { onData as handlePeerData } from './network/messageHandlers'
+import { JamConnection } from './network/types'
 
 const Ctx = createContext<JamState | undefined>(undefined)
 
@@ -23,12 +24,12 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [ping, setPing] = useState(-1)
     const [updateAvailable, setUpdateAvailable] = useState(false)
 
-    const peerRef = useRef<Peer | null>(null)
+    const peerRef = useRef<WebRTCPeerManager | null>(null)
 
-    const conns = useRef<Map<string, DataConnection>>(new Map())
+    const conns = useRef<Map<string, JamConnection>>(new Map())
     const memberRegistry = useRef<Map<string, { name: string; image: string }>>(new Map())
     const cachedUser = useRef<{ name: string; image: string }>({ name: 'Listener', image: '' })
-    const userPromise = useRef<Promise<{ name: string; image: string }> | null>(null)
+    const userPromise = useRef<{ then: (onfulfilled: (value: { name: string; image: string }) => any) => any } | null>(null)
     const refs = useRef({ isHost: false, connected: false, guestControls: false, jamId: '', targetUri: null as string | null, ignoreSync: false, isPlaying: false, forcingPause: false })
     const cmdThrottle = useRef<Map<string, number>>(new Map())
     const lastHostMsg = useRef(0)
@@ -242,7 +243,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }
 
-    const onData = useCallback(async (d: any, conn: DataConnection) => {
+    const onData = useCallback(async (d: any, conn: JamConnection) => {
         await handlePeerData(d, conn, {
             refs,
             lastHostMsg,
@@ -270,14 +271,25 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
     }, [buildMembers, addToQueue, removeFromQueue, broadcast, leaveJam])
 
-    const setupConn = useCallback((conn: DataConnection) => {
+    const setupConn = useCallback((conn: JamConnection) => {
         networkSetupConn(conn, conns, onData, (peerId: string) => {
             memberRegistry.current.delete(peerId)
             setMembers(buildMembers())
         })
+
+        if (!refs.current.isHost) {
+            conn.onOpen(() => {
+                const me = cachedUser.current
+                conn.send({
+                    type: 'JOIN',
+                    name: me.name,
+                    image: me.image
+                })
+            })
+        }
     }, [onData, buildMembers])
 
-    const startJam = async (retries = 0): Promise<void> => {
+    const startJam = async (retries = 0) => {
         if (connected) leaveJam()
         const p = await networkStartJam({
             retries,
@@ -299,7 +311,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         peerRef.current = p
     }
 
-    const joinJam = async (id: string, name?: string): Promise<void> => {
+    const joinJam = async (id: string, name?: string) => {
         if (connected) leaveJam()
         const p = await networkJoinJam({
             id,

@@ -1,4 +1,4 @@
-import { DataConnection } from 'peerjs'
+import { JamConnection } from './types'
 import { TrackInfo, Member } from '../types/jam'
 import { getTrack, getQueue } from '../spotify/player'
 
@@ -21,8 +21,8 @@ type MessageHandlerDeps = {
     cachedUser: RefCurrent<{ name: string; image: string }>
     seekTimers: RefCurrent<ReturnType<typeof setTimeout>[]>
     buildMembers: () => Member[]
-    addToQueue: (uri: string) => Promise<void>
-    removeFromQueue: (uri: string, uid?: string) => Promise<void>
+    addToQueue: (uri: string) => any
+    removeFromQueue: (uri: string, uid?: string) => any
     broadcast: (d: any) => void
     setMembers: (value: Member[] | ((prev: Member[]) => Member[])) => void
     setQueue: (value: TrackInfo[] | ((prev: TrackInfo[]) => TrackInfo[])) => void
@@ -40,10 +40,10 @@ type MessageHandlerDeps = {
     pendingQueueRestore: RefCurrent<TrackInfo[]>
 }
 
-export const handleJoin = async (d: any, conn: DataConnection, deps: MessageHandlerDeps) => {
+export const handleJoin = async (d: any, conn: JamConnection, deps: MessageHandlerDeps) => {
     const r = deps.refs.current
     if (!r.isHost) return
-    deps.memberRegistry.current.set(conn.peer, { name: d.name || 'Listener', image: d.image || '' })
+    deps.memberRegistry.current.set(conn.id, { name: d.name || 'Listener', image: d.image || '' })
     const all = deps.buildMembers()
     deps.setMembers(all)
     conn.send({
@@ -91,11 +91,11 @@ export const handleGCtrl = (d: any, deps: MessageHandlerDeps) => {
     deps.setGuestControls(d.on)
 }
 
-export const handleCmd = (d: any, conn: DataConnection, deps: MessageHandlerDeps) => {
+export const handleCmd = (d: any, conn: JamConnection, deps: MessageHandlerDeps) => {
     const r = deps.refs.current
     if (!r.isHost || !r.guestControls) return
-    if (Date.now() - (deps.cmdThrottle.current.get(conn.peer) || 0) < 500) return
-    deps.cmdThrottle.current.set(conn.peer, Date.now())
+    if (Date.now() - (deps.cmdThrottle.current.get(conn.id) || 0) < 500) return
+    deps.cmdThrottle.current.set(conn.id, Date.now())
     if (d.a === 'play') (Spicetify as any).Player.play()
     else if (d.a === 'pause') (Spicetify as any).Player.pause()
     else if (d.a === 'next') (Spicetify as any).Player.next()
@@ -194,7 +194,7 @@ export const handleQ = (d: any, deps: MessageHandlerDeps) => {
     deps.setQueue(d.queue)
 }
 
-export const handlePing = (d: any, conn: DataConnection, deps: MessageHandlerDeps) => {
+export const handlePing = (d: any, conn: JamConnection, deps: MessageHandlerDeps) => {
     conn.send({ type: 'PONG', ts: d.ts })
 }
 
@@ -202,7 +202,7 @@ export const handlePong = (d: any, deps: MessageHandlerDeps) => {
     deps.setPing(Date.now() - d.ts)
 }
 
-export const handleSync = (d: any, conn: DataConnection, deps: MessageHandlerDeps) => {
+export const handleSync = (d: any, conn: JamConnection, deps: MessageHandlerDeps) => {
     if (deps.refs.current.isHost && (Spicetify as any).Player.data?.item) {
         conn.send({
             type: 'PLAY',
@@ -215,7 +215,7 @@ export const handleSync = (d: any, conn: DataConnection, deps: MessageHandlerDep
     }
 }
 
-export const onData = async (d: any, conn: DataConnection, deps: MessageHandlerDeps) => {
+export const onData = async (d: any, conn: JamConnection, deps: MessageHandlerDeps) => {
     const r = deps.refs.current
     if (!r.isHost) deps.lastHostMsg.current = Date.now()
     switch (d.type) {

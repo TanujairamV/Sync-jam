@@ -28,8 +28,8 @@ export interface JamState {
     duration: number
     ping: number
     updateAvailable: boolean
-    startJam: () => Promise<void>
-    joinJam: (id: string, name: string) => Promise<void>
+    startJam: () => any
+    joinJam: (id: string, name: string) => any
     leaveJam: () => void
     addToQueue: (uri: string) => void
     removeFromQueue: (uri: string, uid?: string) => void
