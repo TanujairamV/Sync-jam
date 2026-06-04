@@ -1,4 +1,8 @@
-import { DataConnection, Peer } from 'peerjs'
+import { Peer } from 'peerjs'
+import { JamConnection } from './types'
+
+import { createHost, joinHost } from './webrtc'
+
 import { Member, TrackInfo } from '../types/jam'
 import { fetchUserAsync, getTrack } from '../spotify/player'
 import { PEER_CONFIG } from './peerConfig'
@@ -7,38 +11,38 @@ type Setter<T> = (value: T | ((prev: T) => T)) => void
 
 type UserRef = { current: { name: string; image: string } }
 type PromiseRef = { current: Promise<{ name: string; image: string }> | null }
-type ConnsRef = { current: Map<string, DataConnection> }
+type ConnsRef = { current: Map<string, JamConnection> }
 type ReconnectAttemptRef = { current: number }
 type ReconnectTimerRef = { current: ReturnType<typeof setTimeout> | null }
 
-export type SetupConnFn = (conn: DataConnection) => void
+export type SetupConnFn = (conn: JamConnection) => void
 
 export const setupConn = (
-    conn: DataConnection,
+    conn: JamConnection,
     conns: ConnsRef,
-    onData: (d: any, conn: DataConnection) => Promise<void>,
+    onData: (d: any, conn: JamConnection) => Promise<void>,
     onClose: (peerId: string) => void
 ) => {
-    console.log('[JAM] setupConn', conn.peer)
+    console.log('[JAM] setupConn', conn.id)
 
     conn.on('open', () => {
-        console.log('[JAM] connection open', conn.peer)
-        conns.current.set(conn.peer, conn)
+        console.log('[JAM] connection open', conn.id)
+        conns.current.set(conn.id, conn)
     })
 
     conn.on('data', (d: any) => {
-        console.log('[JAM] data received', d?.type, 'from', conn.peer)
+        console.log('[JAM] data received', d?.type, 'from', conn.id)
         onData(d, conn)
     })
 
     conn.on('close', () => {
-        console.warn('[JAM] connection closed', conn.peer)
-        conns.current.delete(conn.peer)
-        onClose(conn.peer)
+        console.warn('[JAM] connection closed', conn.id)
+        conns.current.delete(conn.id)
+        onClose(conn.id)
     })
 
     conn.on('error', (e: any) => {
-        console.error('[JAM] connection error', conn.peer, e)
+        console.error('[JAM] connection error', conn.id, e)
     })
 }
 
@@ -123,9 +127,14 @@ export const startJam = async (params: {
                 console.warn('[HOST] RAW CLOSE', conn.peer)
             })
             setTimeout(() => {
+                 console.log(
+                '[HOST SDP TYPE]',
+                (conn as any).options?._payload?.sdp?.type
+            )
+
                 console.log(
-                    '[HOST] payload after 3s',
-                    (conn as any).options?._payload
+                    '[HOST SDP]',
+                    (conn as any).options?._payload?.sdp
                 )
 
                 console.log(
@@ -133,6 +142,7 @@ export const startJam = async (params: {
                     conn.open
                 )
             }, 3000)
+
             params.setupConn(conn)
         })
 
@@ -461,4 +471,16 @@ export const joinJam = async (params: {
             console.warn('[GUEST] PEER CLOSED')
         })
     })
+}
+
+export const testWebRTC = async () => {
+    const conn =
+        await createHost('TESTROOM')
+
+    console.log(
+        '[WEBRTC TEST]',
+        conn
+    )
+
+    return conn
 }

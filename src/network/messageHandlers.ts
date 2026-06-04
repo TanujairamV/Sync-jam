@@ -116,7 +116,7 @@ export const handleCmd = (d: any, conn: DataConnection, deps: MessageHandlerDeps
 
 export const handleKick = (d: any, deps: MessageHandlerDeps) => {
     deps.leaveJam()
-    deps.setError('Removed from Jam')
+    deps.setError('Removed from Jam');
     (Spicetify as any).showNotification('Kicked from Jam')
 }
 
