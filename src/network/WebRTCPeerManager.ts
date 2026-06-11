@@ -4,9 +4,6 @@ import { SignalingClient } from './signaling'
 export class WebRTCPeerManager {
     private connections = new Map<string, JamConnection>()
     private peerConnections = new Map<string, RTCPeerConnection>()
-    private guestConnectionFactory:
-        | ((id: string) => JamConnection)
-        | null = null
     public signaling = new SignalingClient()
     public roomId: string
     public role: 'host' | 'guest'
@@ -35,12 +32,6 @@ export class WebRTCPeerManager {
         return this.peerConnections.get(id)
     }
 
-    setGuestConnectionFactory(
-        factory: (id: string) => JamConnection
-    ): void {
-        this.guestConnectionFactory = factory
-    }
-
     removeConnection(id: string): void {
         const conn = this.connections.get(id)
         if (conn) {
@@ -59,16 +50,6 @@ export class WebRTCPeerManager {
         const existing = this.connections.get(id)
         if (existing) {
             return existing
-        }
-
-        if (this.role === 'guest' && id === this.roomId) {
-            if (!this.guestConnectionFactory) {
-                throw new Error(
-                    `No guest connection factory available for ${id}`
-                )
-            }
-
-            return this.guestConnectionFactory(id)
         }
 
         throw new Error(`Connection not found: ${id}`)

@@ -288,14 +288,17 @@ export const joinHost = async (
     const manager = new WebRTCPeerManager(roomId, 'guest')
     let hostId: string | null = null
 
-    const createGuestConnection = () => {
-        const deferred = new DeferredWebRTCConnection(roomId)
+
+    const createGuestConnection = (
+        id: string
+    ) => {
+        const deferred = new DeferredWebRTCConnection(id)
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
 
-        manager.addConnection(roomId, deferred, pc)
+        manager.addConnection(id, deferred, pc)
 
         pc.onicecandidate = e => {
-            if (!e.candidate || !hostId) return
+            if (!e.candidate) return
 
             console.log(
                 '[GUEST ICE]',
@@ -304,7 +307,7 @@ export const joinHost = async (
 
             manager.signaling.send({
                 sender: manager.signaling.clientId,
-                target: hostId,
+                target: id,
                 type: 'candidate',
                 candidate: e.candidate
             })
@@ -330,14 +333,12 @@ export const joinHost = async (
         }
 
         deferred.onClose(() => {
-            manager.removeConnection(roomId)
+            manager.removeConnection(id)
         })
 
         onConnection(deferred)
         return deferred
     }
-
-    manager.setGuestConnectionFactory(createGuestConnection)
 
     await manager.signaling.connect(
         roomId,
@@ -346,13 +347,22 @@ export const joinHost = async (
 
             if (msg.type === 'offer') {
                 hostId = msg.sender
-                const pc = manager.getPeerConnection(roomId)
-                if (!pc) return
+                if (!manager.getPeerConnection(hostId)) {
+                    createGuestConnection(hostId)
+                }
 
+                const pc = manager.getPeerConnection(hostId)
+                if (!pc) return
+                console.log(
+                    '[GUEST] Offer from',
+                    hostId
+                )
                 await pc.setRemoteDescription(msg.offer)
                 const answer = await pc.createAnswer()
                 await pc.setLocalDescription(answer)
-
+                console.log(
+                    '[GUEST] Sending answer'
+                )
                 manager.signaling.send({
                     sender: manager.signaling.clientId,
                     target: hostId,
@@ -362,7 +372,7 @@ export const joinHost = async (
             }
 
             if (msg.type === 'candidate' && msg.sender === hostId) {
-                const pc = manager.getPeerConnection(roomId)
+                const pc = manager.getPeerConnection(hostId)
                 if (!pc) return
 
                 await pc.addIceCandidate(msg.candidate)
@@ -371,8 +381,6 @@ export const joinHost = async (
     )
 
     await manager.signaling.waitForClientId()
-
-    createGuestConnection()
 
     return manager
 }
