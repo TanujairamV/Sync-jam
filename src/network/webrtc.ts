@@ -338,7 +338,6 @@ export const joinHost = async (
     }
 
     manager.setGuestConnectionFactory(createGuestConnection)
-    createGuestConnection()
 
     await manager.signaling.connect(
         roomId,
@@ -372,6 +371,8 @@ export const joinHost = async (
     )
 
     await manager.signaling.waitForClientId()
+
+    createGuestConnection()
 
     return manager
 }
