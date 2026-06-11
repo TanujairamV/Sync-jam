@@ -223,17 +223,33 @@ export const createHost = async (
             )
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
         const channel = pc.createDataChannel('jam')
-        const conn = new WebRTCConnection(peerId, channel)
+        
+        channel.onopen = () => {
+            console.log(
+                '[HOST] DataChannel OPEN',
+                peerId
+            )
+        }
 
+        channel.onclose = () => {
+            console.log(
+                '[HOST] DataChannel CLOSE',
+                peerId
+            )
+        }
+
+        const conn = new WebRTCConnection(peerId, channel)
         manager.addConnection(peerId, conn, pc)
         onConnection(conn)
 
         pc.onicecandidate = e => {
+            if (!e.candidate) return
+
             console.log(
                 '[HOST ICE]',
-                e.candidate?.candidate
+                e.candidate.candidate
             )
-            if (!e.candidate) return
+            
             manager.signaling.send({
                 sender: manager.signaling.clientId,
                 target: peerId,
@@ -241,6 +257,11 @@ export const createHost = async (
                 candidate: e.candidate
             })
         }
+
+        console.log(
+            '[HOST] Creating offer for',
+            peerId
+        )
 
         const offer = await pc.createOffer()
         await pc.setLocalDescription(offer)
@@ -275,6 +296,12 @@ export const joinHost = async (
 
         pc.onicecandidate = e => {
             if (!e.candidate || !hostId) return
+
+            console.log(
+                '[GUEST ICE]',
+                e.candidate.candidate
+            )
+
             manager.signaling.send({
                 sender: manager.signaling.clientId,
                 target: hostId,
@@ -284,6 +311,21 @@ export const joinHost = async (
         }
 
         pc.ondatachannel = e => {
+            console.log(
+                '[GUEST] DataChannel received'
+            )
+
+            e.channel.onopen = () => {
+                console.log(
+                    '[GUEST] DataChannel OPEN'
+                )
+            }
+
+            e.channel.onclose = () => {
+                console.log(
+                    '[GUEST] DataChannel CLOSE'
+                )
+            }
             deferred.attach(e.channel)
         }
 
