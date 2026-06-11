@@ -154,6 +154,30 @@ export const createHost = async (
     onConnection: (conn: JamConnection) => void
 ) => {
     const manager = new WebRTCPeerManager(roomId, 'host')
+    const pendingIceCandidates = new Map<string, RTCIceCandidateInit[]>()
+
+    const queueIceCandidate = (
+        peerId: string,
+        candidate: RTCIceCandidateInit
+    ) => {
+        const queue = pendingIceCandidates.get(peerId) ?? []
+        queue.push(candidate)
+        pendingIceCandidates.set(peerId, queue)
+    }
+
+    const flushIceCandidates = async (
+        peerId: string,
+        pc: RTCPeerConnection
+    ) => {
+        const queued = pendingIceCandidates.get(peerId)
+        if (!queued?.length) return
+
+        for (const candidate of queued) {
+            await pc.addIceCandidate(candidate)
+        }
+
+        pendingIceCandidates.delete(peerId)
+    }
 
     await manager.signaling.connect(
         roomId,
@@ -169,14 +193,21 @@ export const createHost = async (
                 const pc = manager.getPeerConnection(msg.sender)
                 if (pc) {
                     await pc.setRemoteDescription(msg.answer)
+                    console.log('[HOST] Remote description set')
+                    await flushIceCandidates(msg.sender, pc)
                 }
             }
 
             if (msg.type === 'candidate') {
                 const pc = manager.getPeerConnection(msg.sender)
-                if (pc) {
-                    await pc.addIceCandidate(msg.candidate)
+                if (!pc || !pc.remoteDescription) {
+                    queueIceCandidate(msg.sender, msg.candidate)
+                    return
                 }
+
+                await pc.addIceCandidate(
+                    msg.candidate
+                )
             }
 
             if (msg.type === 'offer') {
@@ -201,6 +232,7 @@ export const createHost = async (
                 }
 
                 await pc.setRemoteDescription(msg.offer)
+                await flushIceCandidates(msg.sender, pc)
                 const answer = await pc.createAnswer()
                 await pc.setLocalDescription(answer)
 
@@ -222,6 +254,19 @@ export const createHost = async (
                 peerId
             )
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+        pc.onconnectionstatechange = () => {
+            console.log(
+                '[HOST PC]',
+                pc.connectionState
+            )
+        }
+
+        pc.oniceconnectionstatechange = () => {
+            console.log(
+                '[HOST ICE STATE]',
+                pc.iceConnectionState
+            )
+        }
         const channel = pc.createDataChannel('jam')
         
         channel.onopen = () => {
@@ -286,15 +331,50 @@ export const joinHost = async (
     onConnection: (conn: JamConnection) => void
 ) => {
     const manager = new WebRTCPeerManager(roomId, 'guest')
+    const pendingIceCandidates = new Map<string, RTCIceCandidateInit[]>()
     let hostId: string | null = null
 
+    const queueIceCandidate = (
+        peerId: string,
+        candidate: RTCIceCandidateInit
+    ) => {
+        const queue = pendingIceCandidates.get(peerId) ?? []
+        queue.push(candidate)
+        pendingIceCandidates.set(peerId, queue)
+    }
+
+    const flushIceCandidates = async (
+        peerId: string,
+        pc: RTCPeerConnection
+    ) => {
+        const queued = pendingIceCandidates.get(peerId)
+        if (!queued?.length) return
+
+        for (const candidate of queued) {
+            await pc.addIceCandidate(candidate)
+        }
+
+        pendingIceCandidates.delete(peerId)
+    }
 
     const createGuestConnection = (
         id: string
     ) => {
         const deferred = new DeferredWebRTCConnection(id)
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+        pc.onconnectionstatechange = () => {
+            console.log(
+                '[GUEST PC]',
+                pc.connectionState
+            )
+        }
 
+        pc.oniceconnectionstatechange = () => {
+            console.log(
+                '[GUEST ICE STATE]',
+                pc.iceConnectionState
+            )
+        }
         manager.addConnection(id, deferred, pc)
 
         pc.onicecandidate = e => {
@@ -347,17 +427,20 @@ export const joinHost = async (
 
             if (msg.type === 'offer') {
                 hostId = msg.sender
-                if (!manager.getPeerConnection(hostId)) {
-                    createGuestConnection(hostId)
+                const peerId = msg.sender
+                if (!manager.getPeerConnection(peerId)) {
+                    createGuestConnection(peerId)
                 }
 
-                const pc = manager.getPeerConnection(hostId)
+                const pc = manager.getPeerConnection(peerId)
                 if (!pc) return
                 console.log(
                     '[GUEST] Offer from',
-                    hostId
+                    peerId
                 )
                 await pc.setRemoteDescription(msg.offer)
+                console.log('[GUEST] Remote description set')
+                await flushIceCandidates(peerId, pc)
                 const answer = await pc.createAnswer()
                 await pc.setLocalDescription(answer)
                 console.log(
@@ -365,21 +448,23 @@ export const joinHost = async (
                 )
                 manager.signaling.send({
                     sender: manager.signaling.clientId,
-                    target: hostId,
+                    target: peerId,
                     type: 'answer',
                     answer
                 })
             }
 
-            if (msg.type === 'candidate' && msg.sender === hostId) {
-                const pc = manager.getPeerConnection(hostId)
+            if (msg.type === 'candidate') {
+                const peerId = msg.sender
+                if (!hostId) {
+                    hostId = peerId
+                }
 
-                if (!pc) return
+                if (peerId !== hostId) return
 
-                if (!pc.remoteDescription) {
-                    console.log(
-                        '[GUEST] Ignoring early ICE'
-                    )
+                const pc = manager.getPeerConnection(peerId)
+                if (!pc || !pc.remoteDescription) {
+                    queueIceCandidate(peerId, msg.candidate)
                     return
                 }
 
