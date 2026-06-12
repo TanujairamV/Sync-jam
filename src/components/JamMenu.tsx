@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useJam } from '../JamContext';
-import QRCode from 'qrcode';
+import RoomCodeInput from './RoomCodeInput';
 
 const COLORS = [
     'linear-gradient(135deg,#1db954,#1ed760)',
@@ -26,15 +26,19 @@ const styles = `
     font-family: 'DM Sans', sans-serif;
     background: #0a0a0c;
     color: #e8e8ea;
-    width: 340px;
-    min-height: 200px;
-    max-height: 680px;
+
+    width: 360px;
+
     display: flex;
     flex-direction: column;
-    border-radius: 16px;
+    flex: 1;
+    min-height: 0;
+
+    border-radius: 0;
     overflow: hidden;
+
     border: 1px solid rgba(255,255,255,0.06);
-    box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03);
+    box-shadow: none;
   }
 
   .jam-header {
@@ -118,11 +122,16 @@ const styles = `
 
   .jam-body {
     flex: 1;
+    min-height: 0;
+
     padding: 16px;
+
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    overflow: hidden;
+    gap: 12px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .jam-body.scrollable {
@@ -245,28 +254,6 @@ const styles = `
     background: rgba(255,255,255,0.05);
   }
 
-  .jam-input {
-    width: 100%;
-    height: 40px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px;
-    color: #e0e0e4;
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    padding: 0 14px;
-    outline: none;
-    transition: all 0.15s ease;
-    box-sizing: border-box;
-  }
-
-  .jam-input::placeholder { color: #383840; }
-
-  .jam-input:focus {
-    border-color: rgba(255,255,255,0.18);
-    background: rgba(255,255,255,0.06);
-  }
-
   .jam-error {
     display: flex;
     align-items: center;
@@ -332,29 +319,27 @@ const styles = `
   .jam-ping.measuring { color: #555; background: rgba(255,255,255,0.04); }
 
   .jam-np-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 14px;
-    overflow: hidden;
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      overflow: hidden;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
   }
 
   .jam-np-art-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
+      width: 100%;
+      overflow: hidden;
   }
 
   .jam-np-art {
-    width: 120px;
-    height: 120px;
-    border-radius: 10px;
-    object-fit: cover;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+      object-fit: cover;
   }
 
   .jam-np-art.placeholder {
@@ -362,6 +347,7 @@ const styles = `
   }
 
   .jam-np-meta {
+    padding: 0 14px;
     text-align: center;
   }
 
@@ -488,15 +474,22 @@ const styles = `
     overflow: hidden;
   }
 
-  .jam-section-title {
+ .jam-section-title {
     display: flex;
     align-items: center;
     gap: 7px;
+
     padding: 10px 14px 8px;
+
     font-size: 9px;
     font-weight: 600;
+
+    text-align: left;
+    justify-content: flex-start;
+
     letter-spacing: 1.2px;
     color: #333;
+
     border-bottom: 1px solid rgba(255,255,255,0.04);
   }
 
@@ -507,6 +500,63 @@ const styles = `
     padding: 12px 14px;
     font-size: 12px;
     color: #888;
+  }
+
+  .jam-share-row {
+    padding: 0 16px 16px;
+
+    display: flex;
+    justify-content: center;
+  }
+
+  .room-code-input {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .room-code-cell {
+    position: relative;
+  }
+
+  .room-code-cell input {
+    width: 100%;
+    min-height: 56px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    color: #f8f8fa;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-align: center;
+    text-transform: uppercase;
+    outline: none;
+    transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  .room-code-cell input::placeholder {
+    color: rgba(255,255,255,0.24);
+  }
+
+  .room-code-cell input:hover {
+    border-color: rgba(255,255,255,0.22);
+    transform: translateY(-1px);
+  }
+
+  .room-code-cell input:focus {
+    border-color: #1db954;
+    box-shadow: 0 0 0 4px rgba(29,185,84,0.14);
+    background: rgba(255,255,255,0.08);
+  }
+
+  .room-code-cell input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 
   .jam-toggle {
@@ -540,47 +590,20 @@ const styles = `
   }
 
   .jam-id-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 12px 16px;
   }
 
   .jam-id-code {
-    flex: 1;
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: #666;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .jam-share-row {
-    display: flex;
-    gap: 8px;
-    padding: 0 14px 12px;
-  }
-
-  .jam-qr-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px;
-    gap: 10px;
-    border-top: 1px solid rgba(255,255,255,0.05);
-  }
-
-  .jam-qr-box img {
-    width: 140px;
-    height: 140px;
-    border-radius: 8px;
-  }
-
-  .jam-qr-label {
-    font-size: 11px;
-    color: #444;
-    letter-spacing: 0.3px;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-align: center;
+      color: #ffffff;
+      user-select: all;
   }
 
   .jam-q-row {
@@ -742,18 +765,10 @@ const styles = `
 
 const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const j = useJam();
-    const [joinInput, setJoinInput] = useState('');
-    const [qrUrl, setQrUrl] = useState('');
+    const [roomCode, setRoomCode] = useState('');
     const [copied, setCopied] = useState(false);
-    const [showQr, setShowQr] = useState(false);
     const [dragIdx, setDragIdx] = useState<number | null>(null);
     const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-
-    useEffect(() => {
-        if (j.jamId) {
-            QRCode.toDataURL(j.jamId, { width: 200, margin: 1, color: { dark: '#000', light: '#fff' } }).then(setQrUrl);
-        }
-    }, [j.jamId]);
 
     const copy = (text: string, msg: string) => {
         try { (Spicetify as any).Platform.ClipboardAPI.copy(text); } catch { navigator.clipboard?.writeText(text); }
@@ -794,14 +809,25 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         )}
                         <div className="jam-hero">
                             <div className="jam-hero-icon">{I.jam}</div>
-                            <h2 className="jam-hero-title">Host a Listening Session</h2>
+                            <h2 className="jam-hero-title">Start a new Jam</h2>
                             <p className="jam-hero-desc">Sync playback and share your queue with friends in real-time.</p>
                         </div>
                         <button className="jam-btn green full" onClick={j.startJam}>Start a new Jam</button>
-                        <div className="jam-divider"><div className="jam-divider-line"/><span>or join one</span><div className="jam-divider-line"/></div>
-                        <input className="jam-input" placeholder="Paste Jam ID or join link…" value={joinInput}
-                            onChange={e => setJoinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && j.joinJam(joinInput)} spellCheck={false}/>
-                        <button className="jam-btn outline full" style={{marginTop:8}} onClick={() => j.joinJam(joinInput)}>Join Session</button>
+                        <div className="jam-divider"><div className="jam-divider-line"/><span>Enter Room Code</span><div className="jam-divider-line"/></div>
+                        <RoomCodeInput
+                            value={roomCode}
+                            onChange={setRoomCode}
+                            autoFocus
+                            disabled={false}
+                        />
+                        <button
+                            className="jam-btn outline full"
+                            style={{ marginTop: 8 }}
+                            onClick={() => j.joinJam(roomCode)}
+                            disabled={!/^[A-Z0-9]{6}$/.test(roomCode)}
+                        >
+                            Join Session
+                        </button>
                         {j.error && <div className="jam-error">{I.warn} {j.error}</div>}
                     </div>
                 </div>
@@ -893,29 +919,16 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
                     {j.isHost && (
                         <div className="jam-section-card">
-                            <div className="jam-section-title">INVITE</div>
+                            <div className="jam-section-title">Room Code</div>
                             <div className="jam-id-row">
                                 <span className="jam-id-code">{j.jamId}</span>
-                                <button
-                                    className={`jam-icon-btn ${copied ? 'green' : ''}`}
-                                    onClick={() => { copy(j.jamId, 'Copied!'); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                                >{copied ? I.check : I.copy}</button>
                             </div>
                             <div className="jam-share-row">
                                 <button className="jam-btn outline flex-1"
-                                    onClick={() => copy(`${window.location.origin}${window.location.pathname}#jam=${j.jamId}`, 'Link copied!')}>
-                                    {I.link} Copy Link
-                                </button>
-                                <button className="jam-btn outline flex-1" onClick={() => setShowQr(v => !v)}>
-                                    {I.qr} {showQr ? 'Hide QR' : 'QR Code'}
+                                    onClick={() => copy(j.jamId, 'Copied invite code!')}>
+                                    {I.copy} Copy Code
                                 </button>
                             </div>
-                            {showQr && qrUrl && (
-                                <div className="jam-qr-box">
-                                    <img src={qrUrl} alt="QR"/>
-                                    <div className="jam-qr-label">Scan to join</div>
-                                </div>
-                            )}
                         </div>
                     )}
 
