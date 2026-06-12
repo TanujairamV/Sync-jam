@@ -382,6 +382,7 @@ const styles = `
     display: flex;
     align-items: center;
     gap: 10px;
+    padding: 0 14px;
   }
 
   .jam-time {
@@ -434,6 +435,7 @@ const styles = `
     align-items: center;
     justify-content: center;
     gap: 8px;
+    padding: 0 14px 14px;
   }
 
   .jam-ctrl-btn {
@@ -559,6 +561,34 @@ const styles = `
     cursor: not-allowed;
   }
 
+  .jam-update-banner {
+      background: rgba(29, 185, 84, 0.1);
+      border-color: #1db954;
+      color: #1db954;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background 0.15s ease;
+  }
+
+  .jam-update-banner:hover {
+      background: rgba(29, 185, 84, 0.16);
+  }
+
+  .jam-update-text {
+      font-size: 14px;
+  }
+
+  .jam-join-btn {
+      margin-top: 8px;
+  }
+
+  .jam-progress-rail.clickable {
+      cursor: pointer;
+  }
+
+  .jam-progress-rail.readonly {
+      cursor: default;
+  }
   .jam-toggle {
     width: 38px;
     height: 22px;
@@ -802,9 +832,10 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     </div>
                     <div className="jam-body">
                         {j.updateAvailable && (
-                            <div className="jam-error" style={{ background: 'rgba(29,185,84,0.1)', borderColor: '#1db954', color: '#1db954', cursor: 'pointer', marginBottom: '10px' }}
-                                onClick={() => window.open('https://github.com/Kyzenkms/spicetify-jam', '_blank')}>
-                                <span style={{ fontSize: '14px' }}>✨ Update Available! Click to view</span>
+                            <div className="jam-error jam-update-banner"
+                            onClick={() => window.open('https://github.com/Kyzenkms/spicetify-jam', '_blank')}>
+
+                                <span className="jam-update-text"> ✨ Update Available! Click to view </span>
                             </div>
                         )}
                         <div className="jam-hero">
@@ -821,8 +852,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             disabled={false}
                         />
                         <button
-                            className="jam-btn outline full"
-                            style={{ marginTop: 8 }}
+                            className="jam-btn outline full jam-join-btn"
                             onClick={() => j.joinJam(roomCode)}
                             disabled={!/^[A-Z0-9]{6}$/.test(roomCode)}
                         >
@@ -844,7 +874,13 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <div className="jam-logo-icon active">{I.jam}</div>
                         <div>
                             <div className="jam-title">Jam</div>
-                            <div className="jam-subtitle">{j.isHost ? 'Hosting' : `With ${j.hostName}`}</div>
+                            <div className="jam-subtitle">
+                                {j.isHost
+                                    ? 'Hosting'
+                                    : j.hostName
+                                        ? `With ${j.hostName}`
+                                        : 'Connected'}
+                                    </div>
                         </div>
                     </div>
                     <div className="jam-header-right">
@@ -859,9 +895,9 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
                 <div className="jam-body scrollable">
                     {j.updateAvailable && (
-                        <div className="jam-error" style={{ background: 'rgba(29,185,84,0.1)', borderColor: '#1db954', color: '#1db954', cursor: 'pointer' }}
+                        <div className="jam-error jam-update-banner"
                             onClick={() => window.open('https://github.com/Kyzenkms/spicetify-jam', '_blank')}>
-                            <span style={{ fontSize: '14px' }}>✨ Update Available! Click to view</span>
+                            <span className="jam-update-text">✨ Update Available! Click to view</span>
                         </div>
                     )}
 
@@ -875,7 +911,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <div className="jam-np-card">
                             <div className="jam-np-art-wrap">
                                 {j.nowPlaying.artUrl
-                                    ? <img className="jam-np-art" src={j.nowPlaying.artUrl} alt="" onError={e => { (e.target as HTMLImageElement).style.display='none'; }}/>
+                                    ? <img className="jam-np-art" src={j.nowPlaying.artUrl} alt="" onError={e => { (e.target as HTMLImageElement).hidden = true; }}/>
                                     : <div className="jam-np-art placeholder"/>}
                             </div>
                             <div className="jam-np-meta">
@@ -885,9 +921,8 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             </div>
                             <div className="jam-progress-row">
                                 <span className="jam-time">{fmtTime(j.progress)}</span>
-                                <div className="jam-progress-rail"
-                                    onClick={handleSeek}
-                                    style={{ cursor: canEdit ? 'pointer' : 'default' }}>
+                                <div className={`jam-progress-rail ${canEdit ? 'clickable' : 'readonly'}`}
+                                    onClick={handleSeek}>
                                     <div className="jam-progress-fill" style={{ width: `${pct}%` }}/>
                                     <div className="jam-progress-dot" style={{ left: `${pct}%` }}/>
                                 </div>
@@ -949,7 +984,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                     <div className="jam-q-num">{i + 1}</div>
                                     <div className="jam-q-thumb">
                                         {t.artUrl
-                                            ? <img src={t.artUrl} alt="" onError={e => { (e.target as HTMLImageElement).style.display='none'; }}/>
+                                            ? <img src={t.artUrl} alt="" onError={e => { (e.target as HTMLImageElement).hidden = true; }}/>
                                             : <div className="jam-q-thumb-ph"/>}
                                     </div>
                                     <div className="jam-q-meta">
@@ -973,7 +1008,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             <div key={m.id + i} className="jam-member-row">
                                 <div className="jam-avatar" style={{ background: COLORS[i % COLORS.length] }}>
                                     {m.image
-                                        ? <img src={m.image} alt="" onError={e => { (e.target as HTMLImageElement).style.display='none'; }}/>
+                                        ? <img src={m.image} alt="" onError={e => { (e.target as HTMLImageElement).hidden = true; }}/>
                                         : safeInitial(m.name)}
                                 </div>
                                 <div className="jam-member-info">

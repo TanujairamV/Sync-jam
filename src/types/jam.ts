@@ -29,7 +29,7 @@ export interface JamState {
     ping: number
     updateAvailable: boolean
     startJam: () => any
-    joinJam: (id: string, name: string) => any
+    joinJam: (id: string) => any
     leaveJam: () => void
     addToQueue: (uri: string) => void
     removeFromQueue: (uri: string, uid?: string) => void
