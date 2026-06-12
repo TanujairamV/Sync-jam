@@ -833,7 +833,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <div className="jam-body">
                         {j.updateAvailable && (
                             <div className="jam-error jam-update-banner"
-                            onClick={() => window.open('https://github.com/Kyzenkms/spicetify-jam', '_blank')}>
+                            onClick={() => window.open('https://github.com/TanujairamV/spicetify-jam', '_blank')}>
 
                                 <span className="jam-update-text"> ✨ Update Available! Click to view </span>
                             </div>
@@ -896,7 +896,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <div className="jam-body scrollable">
                     {j.updateAvailable && (
                         <div className="jam-error jam-update-banner"
-                            onClick={() => window.open('https://github.com/Kyzenkms/spicetify-jam', '_blank')}>
+                            onClick={() => window.open('https://github.com/TanujairamV/spicetify-jam', '_blank')}>
                             <span className="jam-update-text">✨ Update Available! Click to view</span>
                         </div>
                     )}

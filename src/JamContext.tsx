@@ -54,7 +54,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const checkUpdate = async () => {
             try {
-                const res = await fetch('https://raw.githubusercontent.com/Kyzenkms/spicetify-jam/main/manifest.json')
+                const res = await fetch('https://raw.githubusercontent.com/TanujairamV/spicetify-jam/main/manifest.json')
                 const data = await res.json()
                 if (data.version && data.version !== '1.0.0') {
                     setUpdateAvailable(true)
