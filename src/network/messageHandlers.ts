@@ -237,3 +237,17 @@ export const onData = async (d: any, conn: JamConnection, deps: MessageHandlerDe
         case 'SYNC': return handleSync(d, conn, deps)
     }
 }
+
+export function predictPosition(
+    position: number,
+    timestamp: number,
+    playing: boolean
+) {
+    if (!playing)
+        return Math.max(0, position)
+
+    return Math.max(
+        0,
+        position + (Date.now() - timestamp)
+    )
+}

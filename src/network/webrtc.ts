@@ -1,6 +1,5 @@
 import { JamConnection } from './types'
 import { WebRTCPeerManager } from './WebRTCPeerManager'
-import { SignalingClient } from './signaling'
 
 export const ICE_SERVERS: RTCIceServer[] = [
     {
