@@ -141,7 +141,6 @@ export const joinJam = async (params: {
 
     params.setJamId(cleanId)
     params.setIsHost(false)
-    params.setConnected(false)
     params.setError(null)
     params.setMembers([
         {

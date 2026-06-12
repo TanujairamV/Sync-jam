@@ -159,7 +159,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, [hostConn, broadcast])
 
     const toggleGuestControls = () => {
-        if (!isHost) return
+        if (!refs.current.isHost) return
         const v = !guestControls
         setGuestControls(v)
         broadcast({ type: 'GCTRL', on: v })
@@ -217,9 +217,17 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setConnected(false)
         setJamId('')
         setIsHost(false)
+        refs.current.isHost = false
+        refs.current.connected = false
+        refs.current.guestControls = false
+        refs.current.ignoreSync = false
+        refs.current.forcingPause = false
+        refs.current.targetUri = null
         setMembers([])
         setQueue([])
         setNowPlaying(null)
+        setGuestControls(false)
+        setHostName('Host')
         refs.current.targetUri = null
         setPing(-1)
         reconnectAttempt.current = 0
@@ -232,7 +240,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, [])
 
     const kickMember = (id: string) => {
-        if (!isHost) return
+        if (!refs.current.isHost) return
         const c = conns.current.get(id)
         if (c) {
             c.send({ type: 'KICK' })
@@ -277,20 +285,32 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setMembers(buildMembers())
         })
 
-        if (!refs.current.isHost) {
-            conn.onOpen(() => {
+        conn.onOpen(() => {
+            if (refs.current.isHost) {
+                setMembers(buildMembers())
+            } else {
+                refs.current.connected = true
+                setConnected(true)
+
                 const me = cachedUser.current
                 conn.send({
                     type: 'JOIN',
                     name: me.name,
                     image: me.image
                 })
-            })
-        }
+            }
+        })
     }, [onData, buildMembers])
 
-    const startJam = async (retries = 0) => {
-        if (connected) leaveJam()
+    const startJam = useCallback(async (retries = 0) => {
+        if (refs.current.connected)
+            leaveJam()
+
+        refs.current.isHost = true
+        refs.current.connected = true
+
+        setIsHost(true)
+        setConnected(true) 
         const p = await networkStartJam({
             retries,
             userPromise,
@@ -309,13 +329,15 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setupConn
         })
         peerRef.current = p
-    }
 
-    const joinJam = async (id: string, name?: string) => {
-        if (connected) leaveJam()
+    }, [leaveJam, refreshQueue, setupConn])
+
+    const joinJam = useCallback(async (id: string) => {
+        if (refs.current.connected) {
+            leaveJam()
+        }
         const p = await networkJoinJam({
             id,
-            name,
             userPromise,
             cachedUser,
             conns,
@@ -331,7 +353,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             onData
         })
         peerRef.current = p
-    }
+    }, [leaveJam, setupConn, onData])
 
     useEffect(() => {
         const id = setInterval(() => {
@@ -358,9 +380,11 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             const newConn = peerRef.current.connect(refs.current.jamId)
                             setupConn(newConn)
                             conns.current.set(refs.current.jamId, newConn)
+                            refs.current.connected = true
                             setConnected(true)
                             setError(null)
                             reconnectAttempt.current = 0
+                            reconnectTimer.current = null
                         }, reconnectAttempt.current * 2000)
                     } else {
                         leaveJam()
@@ -502,9 +526,9 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const hash = window.location.hash.slice(1)
         if (hash.startsWith('jam=')) {
             const id = hash.split('=')[1]
-            if (id) joinJam(id)
+            if (id && !refs.current.connected) joinJam(id)
         }
-    }, [])
+    }, [joinJam])
 
     return (
         <Ctx.Provider value={{
