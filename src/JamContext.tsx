@@ -179,6 +179,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (refs.current.isHost) {
             Spicetify.Player.pause()
             setIsPlaying(false)
+            
         } else if (refs.current.guestControls) {
             const c = hostConn()
             if (c?.open) c.send({ type: 'CMD', a: 'pause' })
@@ -423,7 +424,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     broadcast({ type: 'PLAY', uri: uri || '', pos: 0, ts: Date.now(), np: t, paused: hostPaused })
                     if (pendingQueueRestore.current.length > 0) {
                         const restore = pendingQueueRestore.current
-                        pendingQueueRestore.current = []
+                        pendingQueueRestore.current = [];
                         (async () => {
                             for (const tr of restore) {
                                 if (tr.uri) {
@@ -457,6 +458,11 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         const onPP = () => {
+            if (refs.current.ignoreSync) {
+                refs.current.ignoreSync = false
+                return
+            }
+
             const playing = Spicetify.Player.isPlaying()
             setIsPlaying(playing)
             if (refs.current.isHost) {
@@ -464,33 +470,63 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const dur = Spicetify.Player.getDuration()
                 broadcast({ type: 'PS', p: playing, pos, dur })
                 if (playing) {
-                    broadcast({ type: 'PLAY', uri: refs.current.targetUri || '', pos, ts: Date.now(), np: getTrack() })
+                    broadcast({ type: 'PLAY', uri: refs.current.targetUri || '', pos, ts: Date.now(), np: getTrack(), paused: false })
                 } else {
-                    broadcast({ type: 'PAUSE' })
+                    broadcast({ 
+                        type: 'PAUSE' ,
+                        pos: Spicetify.Player.getProgress(),
+                        ts: Date.now() 
+                    })
                 }
+
             } else {
                 if (playing) {
                     if (!refs.current.guestControls) {
                         if (refs.current.forcingPause) return
+
                         refs.current.forcingPause = true
                         Spicetify.Player.pause()
                         Spicetify.showNotification('🔒 Only the host can resume playback')
+                        
                         setTimeout(() => { refs.current.forcingPause = false }, 500)
+
                         const c = hostConn()
-                        if (c?.open) c.send({ type: 'SYNC' })
+                        if (c?.open) {
+                            c.send({ type: 'SYNC' })
+                        }
                     } else {
                         const c = hostConn()
-                        if (c?.open) c.send({ type: 'SYNC' })
-                        if (refs.current.targetUri) {
-                            const curUri = Spicetify.Player.data?.item?.uri
-                            if (curUri && curUri !== refs.current.targetUri) {
-                                refs.current.ignoreSync = true
-                                Spicetify.Player.playUri(refs.current.targetUri).catch(() => {
-                                    refs.current.ignoreSync = false
-                                })
-                                Spicetify.showNotification('🔒 Locked to Jam')
-                            }
+
+                        if (c?.open) {
+                            c.send({
+                                type: 'CMD',
+                                a: 'play'
+                            })
                         }
+
+                        const curUri = Spicetify.Player.data?.item?.uri
+
+                        if (
+                            refs.current.targetUri &&
+                            curUri &&
+                            curUri !== refs.current.targetUri
+                        ) {
+                            refs.current.ignoreSync = true
+
+                            Spicetify.Player.playUri(
+                                refs.current.targetUri).catch(() => {
+                                refs.current.ignoreSync = false
+                            })
+                            Spicetify.showNotification('🔒 Locked to Jam')
+                        }
+                    }
+                } else if (refs.current.guestControls) {
+                    const c = hostConn()
+                    if (c?.open) {
+                        c.send({
+                            type: 'CMD',
+                            a: 'pause'
+                        })
                     }
                 }
             }

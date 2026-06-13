@@ -153,22 +153,20 @@ export const handlePlay = async (d: any, deps: MessageHandlerDeps) => {
         } else {
             r.ignoreSync = true
             deps.setIsPlaying(true)
-            const playTs = Date.now()
             ;(Spicetify as any).Player.playUri(d.uri)
                 .then(() => {
-                    const delay = Date.now() - playTs + (Date.now() - d.ts)
-                    const seekMs = predictPosition(
-                        d.pos,
-                        d.ts,
-                        !d.paused
-                    )
+                    const seekMs = predictPosition(d.pos, d.ts, !d.paused)
                     const sid = setTimeout(() => {
                         try {
-                            ;(Spicetify as any).Player.seek(seekMs)
+                            const current = (Spicetify as any).Player.getProgress()
+                            const drift = calculateDrift(current, seekMs)
+                            if (shouldHardSeek(drift)) {
+                                ;(Spicetify as any).Player.seek(seekMs)
+                            }
                         } finally {
                             r.ignoreSync = false
                         }
-                    }, Math.max(300, delay))
+                    }, Math.max(300, Date.now() - d.ts))
                     deps.seekTimers.current.push(sid)
                 })
                 .catch(() => {
@@ -188,7 +186,7 @@ export const handlePause = (d: any, deps: MessageHandlerDeps) => {
 
 export const handleSeek = (d: any, deps: MessageHandlerDeps) => {
     if (!deps.refs.current.isHost) {
-        const predicted = predictPosition(d.pos, d.ts, true)
+        const predicted = predictPosition(d.pos, d.ts, !d.paused)
         const localProgress = (Spicetify as any).Player.getProgress()
         const drift = calculateDrift(localProgress, predicted)
 
