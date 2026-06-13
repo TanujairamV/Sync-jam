@@ -73,6 +73,7 @@ const RoomCodeInput: React.FC<RoomCodeInputProps> = ({ value, onChange, disabled
         nextChars[index] = '';
         updateCode(nextChars, index);
       } else if (index > 0) {
+        nextChars[index - 1] = "";
         updateCode(nextChars, index - 1);
       }
       return;
@@ -138,7 +139,6 @@ const RoomCodeInput: React.FC<RoomCodeInputProps> = ({ value, onChange, disabled
             onChange={handleChange(index)}
             onKeyDown={handleKeyDown(index)}
             onPaste={handlePaste(index)}
-            onFocus={event => event.target.select()}
             aria-label={`Room code character ${index + 1}`}
           />
         </div>
