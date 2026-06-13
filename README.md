@@ -17,8 +17,6 @@
 
 </div>
 
-Spicetify Jam is a Spicetify extension that enables synchronized listening sessions between Spotify users. It provides real-time playback synchronization, a shared queue, optional collaborative controls, and integrated session management directly within the Spotify client.
-
 ---
 
 # Features
@@ -42,7 +40,7 @@ Spicetify Jam is a Spicetify extension that enables synchronized listening sessi
 * Node.js
 * Git
 
-## Windows
+### Windows
 
 ```powershell
 winget install --id Git.Git -e --source winget
@@ -59,7 +57,7 @@ spicetify config extensions spicetify-jam.js
 spicetify apply
 ```
 
-## Linux / macOS
+### Linux / macOS
 
 ```bash
 git clone https://github.com/TanujairamV/spicetify-jam
@@ -108,172 +106,20 @@ Host-configurable guest permissions:
 
 ---
 
-# Architecture
-
-Spicetify Jam uses a peer-to-peer architecture for low-latency communication.
-
-```
-Host
- │
- │ WebRTC
- │
- ├──── Guest 1
- ├──── Guest 2
- └──── Guest n
-```
-
-The host maintains the authoritative playback state while guests synchronize to the host.
-
-## Networking
-
-* WebRTC peer connections
-* Lightweight signaling layer
-* Automatic connection management
-* Ping and latency measurement
-
-## Synchronization
-
-Current synchronization pipeline:
-
-```
-Host Action
-      │
-      ▼
-Create Event
-      │
-      ▼
-Timestamp Packet
-      │
-      ▼
-Transmit
-      │
-      ▼
-Predict Playback Position
-      │
-      ▼
-Calculate Drift
-      │
-      ▼
-Apply Correction
-```
-
----
-
-# Project Structure
-
-```
-src/
-├── components/
-├── network/
-│   ├── messageHandlers.ts
-│   ├── peerManager.ts
-│   ├── signaling.ts
-│   ├── webrtc.ts
-│   └── WebRTCPeerManager.ts
-├── spotify/
-│   └── player.ts
-├── types/
-├── utils/
-│   └── sync.ts
-├── JamContext.tsx
-└── app.tsx
-```
-
-## Main Components
-
-| Component      | Purpose                       |
-| -------------- | ----------------------------- |
-| `components` | User interface                |
-| `network`    | WebRTC and session management |
-| `spotify`    | Spotify playback integration  |
-| `utils`      | Synchronization algorithms    |
-| `types`      | Shared TypeScript definitions |
-
----
-
 # Usage
 
 ## Creating a Session
 
 1. Open the Jam panel.
 2. Start a new session.
-3. Share the room code or join link.
+3. Share the room code.
 4. Manage playback and the shared queue.
 
 ## Joining a Session
 
 1. Open the Jam panel.
-2. Enter the room code or use a join link.
+2. Enter the room code.
 3. Wait for synchronization.
-
----
-
-# Synchronization
-
-Spicetify Jam currently implements:
-
-## Predictive Synchronization
-
-Incoming playback packets contain:
-
-* Track URI
-* Playback position
-* Timestamp
-* Playback state
-
-The receiving client predicts the host's current playback position by compensating for network latency.
-
-## Drift Correction
-
-Small timing differences are ignored to avoid unnecessary playback interruptions.
-
-Large playback deviations trigger automatic correction.
-
----
-
-# Message Protocol
-
-Common message types:
-
-| Message | Purpose                  |
-| ------- | ------------------------ |
-| JOIN    | Join session             |
-| INIT    | Initial session state    |
-| MEMBERS | Member updates           |
-| PLAY    | Playback synchronization |
-| PAUSE   | Pause synchronization    |
-| SEEK    | Seek synchronization     |
-| Q       | Queue updates            |
-| ADD_Q   | Add queue item           |
-| RM_Q    | Remove queue item        |
-| PING    | Latency measurement      |
-| PONG    | Latency response         |
-| SYNC    | Manual synchronization   |
-
----
-
-# Development
-
-## Build
-
-```bash
-npm run build
-```
-
-## Apply
-
-```bash
-spicetify apply
-```
-
-## Build and Apply
-
-```bash
-npm run build
-spicetify apply
-```
-
----
 
 # Roadmap
 
@@ -303,7 +149,6 @@ Contributions are welcome.
 * Report bugs
 * Suggest features
 * Submit pull requests
-* Improve documentation
 
 ---
 
