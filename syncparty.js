@@ -2,7 +2,7 @@
         while (!Spicetify.React || !Spicetify.ReactDOM) {
           await new Promise(resolve => setTimeout(resolve, 10));
         }
-        var syncDparty = (() => {
+        var syncparty = (() => {
   var __create = Object.create;
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -2552,14 +2552,14 @@
  * See the LICENSE file in the root directory of this source tree.
  */
 (async () => {
-    if (!document.getElementById(`syncDparty`)) {
+    if (!document.getElementById(`syncparty`)) {
       var el = document.createElement('style');
-      el.id = `syncDparty`;
+      el.id = `syncparty`;
       el.textContent = (String.raw`
   @import "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap";
 @import "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap";
 
-/* ../../../../tmp/tmp-115116-tCa37eRoQVx8/19ec146c2030/styles.css */
+/* ../../../../tmp/tmp-120345-QcKTGyw0Fun5/19ec15281060/styles.css */
 :root {
   --jam-green: #1db954;
   --jam-green-hover: #1ed760;
