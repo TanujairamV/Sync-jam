@@ -27,15 +27,11 @@ export const setupConn = (
     onData: (d: any, conn: JamConnection) => any,
     onClose: (peerId: string) => void
 ) => {
-    console.log('[JAM] setupConn', conn.id)
-
     conn.onOpen(() => {
-        console.log('[JAM] connection open', conn.id)
         conns.current.set(conn.id, conn)
     })
 
     conn.onData((d: any) => {
-        console.log('[JAM] data received', d?.type, 'from', conn.id)
         onData(d, conn)
     })
 
