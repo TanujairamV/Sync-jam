@@ -126,12 +126,12 @@ const RoomCodeInput: React.FC<RoomCodeInputProps> = ({ value, onChange, disabled
       {chars.map((character, index) => (
         <div key={index} className="room-code-cell">
           <input
-            ref={el => (inputRefs.current[index] = el)}
+            ref={(el) => {inputRefs.current[index] = el;}}
             type="text"
             inputMode="text"
             autoComplete="off"
             autoCorrect="off"
-            spellCheck="{false}"
+            spellCheck="false"
             maxLength={1}
             value={character}
             disabled={disabled}

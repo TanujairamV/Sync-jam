@@ -1,6 +1,3 @@
-/* ══════════════════════════════════════════════
-   Spicetify Jam — Sidebar Panel
-   ══════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
 
@@ -21,13 +18,12 @@
     --jam-danger: #e84444;
 }
 
-/* ── Sidebar host element ──────────────────── */
 #jam-sidebar {
     position: fixed;
     top: 0;
     right: 0;
     width: 360px;
-    height: calc(100vh - 90px); /* Leave space above the playbar */
+    height: calc(100vh - 90px);
     z-index: 9998;
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -38,7 +34,6 @@
     pointer-events: all;
 }
 
-/* ── Bottom bar button ─────────────────────── */
 .jam-topbar-btn {
     background: transparent;
     border: none;
@@ -60,7 +55,6 @@
     50% { opacity: 0.5; }
 }
 
-/* ── Root panel ────────────────────────────── */
 .jam-root {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     display: flex;
@@ -74,7 +68,6 @@
     box-shadow: -8px 0 32px rgba(0,0,0,0.6);
 }
 
-/* ── Header ────────────────────────────────── */
 .jam-header {
     display: flex;
     align-items: center;
@@ -109,7 +102,6 @@
 .jam-title    { font-size: 16px; font-weight: 800; letter-spacing: -0.2px; }
 .jam-subtitle { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 1px; }
 
-/* Ping */
 .jam-ping {
     font-size: 10px; font-weight: 700;
     padding: 2px 7px; border-radius: 10px;
@@ -130,7 +122,6 @@
 .jam-icon-btn.red:hover         { background: rgba(232,68,68,0.15); color: var(--jam-danger); }
 .jam-icon-btn.green             { background: rgba(29,185,84,0.12); color: var(--jam-green); }
 
-/* ── Body ──────────────────────────────────── */
 .jam-body {
     flex: 1;
     overflow-y: auto;
@@ -143,7 +134,6 @@
 .jam-body::-webkit-scrollbar        { width: 5px; }
 .jam-body::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.1); border-radius: 3px; }
 
-/* ── Live badge ────────────────────────────── */
 .jam-live-badge {
     display: flex; align-items: center; gap: 7px;
     padding: 9px 12px;
@@ -168,7 +158,6 @@
     padding: 2px 7px; border-radius: 10px; text-transform: uppercase;
 }
 
-/* ── Now Playing card ──────────────────────── */
 .jam-np-card {
     background: var(--jam-surface);
     border: 1px solid var(--jam-border);
@@ -190,7 +179,6 @@
 .jam-np-title   { font-size: 17px; font-weight: 900; margin: 0 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jam-np-artist  { font-size: 13px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Progress bar */
 .jam-progress-row {
     display: flex; align-items: center; gap: 8px;
     padding: 12px 14px 6px;
@@ -216,7 +204,6 @@
 }
 .jam-progress-rail:hover .jam-progress-dot { opacity: 1; }
 
-/* Playback controls */
 .jam-controls {
     display: flex; align-items: center; justify-content: center;
     gap: 12px; padding: 8px 14px 16px;
@@ -236,7 +223,6 @@
 }
 .jam-ctrl-btn.main:hover { transform: scale(1.04); box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
 
-/* ── Section cards ─────────────────────────── */
 .jam-section-card {
     background: var(--jam-surface);
     border: 1px solid var(--jam-border);
@@ -251,7 +237,6 @@
     text-transform: uppercase;
 }
 
-/* Settings toggle */
 .jam-setting-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 4px 14px 14px; font-size: 13px; font-weight: 600;
@@ -271,7 +256,6 @@
 }
 .jam-toggle.on .jam-toggle-knob { transform: translateX(18px); }
 
-/* ── Queue ─────────────────────────────────── */
 .jam-q-row {
     display: flex; align-items: center; gap: 9px;
     padding: 7px 12px;
@@ -304,7 +288,6 @@
 .jam-q-btn.green:hover { background: rgba(29,185,84,0.2);  color: #1db954; }
 .jam-q-btn.red:hover   { background: rgba(232,68,68,0.2);  color: #e84444; }
 
-/* ── Members ───────────────────────────────── */
 .jam-member-row {
     display: flex; align-items: center; gap: 10px;
     padding: 9px 14px;
@@ -323,7 +306,6 @@
 .jam-member-name    { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jam-member-role    { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 1px; }
 
-/* ── Share / Invite ────────────────────────── */
 .jam-id-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 4px 14px 12px; gap: 8px;
@@ -342,7 +324,6 @@
 .jam-qr-box img      { width: 100%; display: block; border-radius: 6px; }
 .jam-qr-label        { font-size: 11px; color: #000; font-weight: 700; margin-top: 8px; }
 
-/* ── Footer ────────────────────────────────── */
 .jam-footer {
     padding: 12px 14px 14px;
     border-top: 1px solid var(--jam-border);
@@ -353,7 +334,6 @@
     gap: 7px;
 }
 
-/* ── Buttons ───────────────────────────────── */
 .jam-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     padding: 0 16px; height: 40px; border-radius: 20px;
@@ -368,7 +348,6 @@
 .jam-btn.red     { background: rgba(232,68,68,0.12); color: #e84444; border: 1.5px solid rgba(232,68,68,0.25); }
 .jam-btn.red:hover    { background: #e84444; color: #fff; }
 
-/* ── Input ─────────────────────────────────── */
 .jam-input {
     width: 100%; padding: 11px 14px; box-sizing: border-box;
     background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1);
@@ -378,14 +357,12 @@
 .jam-input::placeholder { color: rgba(255,255,255,0.22); }
 .jam-input:focus        { border-color: rgba(29,185,84,0.45); }
 
-/* ── Divider ───────────────────────────────── */
 .jam-divider {
     display: flex; align-items: center; gap: 10px;
     font-size: 11px; color: rgba(255,255,255,0.25); font-weight: 600;
 }
 .jam-divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
 
-/* ── Landing hero ──────────────────────────── */
 .jam-hero { text-align: center; padding: 20px 0 8px; }
 .jam-hero-icon {
     width: 60px; height: 60px; border-radius: 16px;
@@ -397,14 +374,12 @@
 .jam-hero-title { font-size: 20px; font-weight: 900; margin: 0 0 8px; }
 .jam-hero-desc  { font-size: 13px; color: rgba(255,255,255,0.45); line-height: 1.55; margin: 0; }
 
-/* ── Error ─────────────────────────────────── */
 .jam-error {
     display: flex; align-items: center; gap: 7px;
     padding: 10px 14px;
     background: rgba(232,68,68,0.08); border: 1px solid rgba(232,68,68,0.2);
     border-radius: 8px; color: #ff8080; font-size: 12px;
 }
-
 
 .jam-progress-rail.clickable {
     cursor: pointer;

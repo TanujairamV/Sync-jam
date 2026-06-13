@@ -1,4 +1,3 @@
-import { WebRTCPeerManager } from './WebRTCPeerManager'
 import { createHost, joinHost } from './webrtc'
 import { JamConnection } from './types'
 import { Member, TrackInfo } from '../types/jam'

@@ -1,1 +1,0 @@
-export const PEER_CONFIG = {}

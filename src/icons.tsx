@@ -4,7 +4,6 @@ import {
     Users,
     Copy,
     LogOut,
-    Music2,
     TriangleAlert,
     UserX,
     ListMusic,
@@ -13,7 +12,9 @@ import {
     Play,
     Pause,
     Settings,
-    GripVertical
+    GripVertical,
+    Music
+
 } from "lucide-react";
 
 export const I = Object.freeze({
@@ -23,10 +24,9 @@ export const I = Object.freeze({
     kick: <UserX size={14} />,
 
     copy: <Copy size={14} />,
+    jam: <Music size={20} />,
 
     leave: <LogOut size={14} />,
-
-    jam: <Music2 size={20} />,
     queue: <ListMusic size={15} />,
 
     prev: <SkipBack size={20} />,

@@ -30,11 +30,6 @@ export const ICE_SERVERS: RTCIceServer[] = [
     }
 ]
 
-const sleep = (ms: number) => ({
-    then(resolve: () => void) {
-        setTimeout(resolve, ms)
-    }
-})
 
 class DeferredWebRTCConnection implements JamConnection {
     id: string

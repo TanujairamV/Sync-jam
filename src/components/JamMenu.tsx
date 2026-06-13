@@ -117,7 +117,12 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="jam-section-title">{I.settings} SESSION SETTINGS</div>
             <div className="jam-setting-row">
                 <span>Guest Playback Controls</span>
-                <button className={`jam-toggle ${j.guestControls ? 'on' : ''}`} onClick={j.toggleGuestControls}>
+                <button 
+                className={`jam-toggle ${j.guestControls ? 'on' : ''}`}
+                onClick={j.toggleGuestControls}
+                aria-label="Toggle guest playback controls"
+                aria-pressed={j.guestControls}
+                >
                     <div className="jam-toggle-knob"/>
                 </button>
             </div>
@@ -166,7 +171,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     {canEdit && (
                         <div className="jam-q-btns">
                             <button className="jam-q-btn green" title="Play now" onClick={() => j.jumpToTrack(t.uri!)}>{I.playItem}</button>
-                            <button className="jam-q-btn red" title="Remove" onClick={() => j.removeFromQueue(t.uri!, t.uid)}>{I.x}</button>
+                            <button className="jam-q-btn red" title="Remove" onClick={() => j.removeFromQueue(t.uri!, t.uid)}>{I.close}</button>
                         </div>
                     )}
                 </div>
@@ -189,7 +194,11 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <div className="jam-member-role">{m.isHost ? '● Host' : '○ Listener'}</div>
                     </div>
                     {j.isHost && !m.isHost && (
-                        <button className="jam-icon-btn small red" onClick={() => j.kickMember(m.id)}>{I.kick}</button>
+                        <button 
+                          className="jam-icon-btn small red"
+                          onClick={() => j.kickMember(m.id)}>{I.kick}
+                          aria-label={`Kick ${m.name}`}
+                          </button>
                     )}
                 </div>
             ))}
