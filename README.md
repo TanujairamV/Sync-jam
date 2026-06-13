@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎵 Spicetify Jam
+# 🎵 Sync Party
 
 <p align="center">
   <img src="https://readme-typing-svg.herokuapp.com?font=Lexend+Giga&size=30&pause=1200&color=1db954&center=true&vCenter=true&width=900&lines=Real+time+listening+sessions+for+Spotify;Listen+with+your+friends" />
@@ -178,8 +178,8 @@ src/
 
 ## Main Components
 
-| Component    | Purpose                       |
-| ------------ | ----------------------------- |
+| Component      | Purpose                       |
+| -------------- | ----------------------------- |
 | `components` | User interface                |
 | `network`    | WebRTC and session management |
 | `spotify`    | Spotify playback integration  |
@@ -187,7 +187,6 @@ src/
 | `types`      | Shared TypeScript definitions |
 
 ---
-
 
 # Usage
 

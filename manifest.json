@@ -1,13 +1,20 @@
 {
-  "name": "Spicetify Jam",
-  "description": "Real-time social listening sessions. Sync Spotify playback with friends via P2P — shared queue, live avatars, and instant sync.",
-  "preview": "assets/logo.png",
+  "name": "Sync Party",
+  "description": "Listen to Spotify together with friends in real time.",
+  "preview": "screenshot.png",
+  "main": "sync-party.js",
   "readme": "README.md",
   "authors": [
     {
-      "name": "Kyzenkms",
-      "url": "https://github.com/Kyzenkms"
+      "name": "Tanujairam",
+      "url": "https://github.com/TanujairamV"
     }
   ],
-  "tags": ["social", "sync", "p2p", "multiplayer"]
+  "tags": [
+    "social",
+    "music",
+    "party",
+    "sync",
+    "webrtc"
+  ]
 }

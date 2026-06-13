@@ -1,13 +1,24 @@
 {
-  "name": "spicetify-jam",
+  "name": "sync-party",
   "version": "1.0.0",
   "private": true,
 
+  "description": "Real-time group listening for Spicetify.",
+
   "scripts": {
     "build": "spicetify-creator",
-    "build-local": "spicetify-creator --out=dist --minify",
+    "build-local": "spicetify-creator --out='dist'",
     "watch": "spicetify-creator --watch"
   },
+
+  "keywords": [
+    "spicetify",
+    "spotify",
+    "webrtc",
+    "music",
+    "sync",
+    "jam"
+  ],
 
   "license": "MIT",
 
