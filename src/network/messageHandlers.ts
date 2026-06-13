@@ -122,6 +122,13 @@ export const handleKick = (d: any, deps: MessageHandlerDeps) => {
 }
 
 export const handlePlay = async (d: any, deps: MessageHandlerDeps) => {
+    console.log(
+        "[GUEST] PLAY",
+        d.uri,
+        d.pos,
+        d.paused,
+        Date.now()
+    )
     const r = deps.refs.current
     if (!r.isHost) {
         const curUri = (Spicetify as any).Player.data?.item?.uri
@@ -224,8 +231,15 @@ export const handlePong = (d: any, deps: MessageHandlerDeps) => {
     deps.setPing(Date.now() - d.ts)
 }
 
-export const handleSync = (d: any, conn: JamConnection, deps: MessageHandlerDeps) => {
-    if (deps.refs.current.isHost && (Spicetify as any).Player.data?.item) {
+export const handleSync = async (
+    d: any,
+    conn: JamConnection,
+    deps: MessageHandlerDeps
+) => {
+    if (
+        deps.refs.current.isHost &&
+        (Spicetify as any).Player.data?.item
+    ) {
         conn.send({
             type: 'PLAY',
             uri: (Spicetify as any).Player.data.item.uri,
@@ -233,6 +247,11 @@ export const handleSync = (d: any, conn: JamConnection, deps: MessageHandlerDeps
             ts: Date.now(),
             np: getTrack(),
             paused: !(Spicetify as any).Player.isPlaying()
+        })
+
+        conn.send({
+            type: 'Q',
+            queue: await getQueue()
         })
     }
 }
@@ -256,6 +275,6 @@ export const onData = async (d: any, conn: JamConnection, deps: MessageHandlerDe
         case 'Q': return handleQ(d, deps)
         case 'PING': return handlePing(d, conn, deps)
         case 'PONG': return handlePong(d, deps)
-        case 'SYNC': return handleSync(d, conn, deps)
+        case 'SYNC': return await handleSync(d, conn, deps)
     }
 }

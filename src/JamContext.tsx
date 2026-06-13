@@ -417,6 +417,14 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             songDebounce.current = setTimeout(() => {
                 const uri = Spicetify.Player.data?.item?.uri
                 if (refs.current.isHost) {
+                    console.log('[HOST] Song change',
+                        {
+                            uri,
+                            playing: Spicetify.Player.isPlaying(),
+                            time: Date.now()
+                        }
+                    )
+
                     const t = getTrack()
                     if (t) setNowPlaying(t)
                     refs.current.targetUri = uri || null
@@ -441,11 +449,19 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         refs.current.ignoreSync = false
                         return
                     }
+
                     if (uri && uri !== refs.current.targetUri && refs.current.targetUri) {
                         if (refs.current.guestControls) {
                             const c = hostConn()
                             if (c?.open) c.send({ type: 'CMD', a: 'playuri', uri })
                         } else {
+                            console.log('[GUEST] Song change',
+                                {
+                                    uri,
+                                    playing: Spicetify.Player.isPlaying(),
+                                    time: Date.now()
+                                }
+                            )
                             refs.current.ignoreSync = true
                             Spicetify.Player.playUri(refs.current.targetUri).catch(() => {
                                 refs.current.ignoreSync = false
