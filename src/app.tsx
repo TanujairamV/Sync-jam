@@ -1,6 +1,6 @@
 import React from 'react';
 import { JamProvider } from './JamContext';
-import JamMenu from './components/JamMenu';
+import JamMenu from './components/JamPanel';
 import './components/styles.css';
 
 async function main() {

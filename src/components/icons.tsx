@@ -17,7 +17,7 @@ import {
 
 } from "lucide-react";
 
-export const I = Object.freeze({
+export const Icons = Object.freeze({
     close: <X size={18} />,
 
     people: <Users size={15} />,

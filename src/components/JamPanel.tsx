@@ -12,7 +12,7 @@ const AVATAR_COLORS = [
     'linear-gradient(135deg,#00c9ff,#92fe9d)',
 ];
 
-import { I } from "../icons";
+import { Icons } from "./icons";
 
 const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const j = useJam();
@@ -38,17 +38,17 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="jam-root">
                 <div className="jam-header">
                     <div className="jam-header-left">
-                        <div className="jam-logo-icon">{I.jam}</div>
+                        <div className="jam-logo-icon">{Icons.jam}</div>
                         <div>
                             <div className="jam-title">Sync Party</div>
                             <div className="jam-subtitle">Listen together</div>
                         </div>
                     </div>
-                    <button className="jam-icon-btn" onClick={onClose}>{I.close}</button>
+                    <button className="jam-icon-btn" onClick={onClose}>{Icons.close}</button>
                 </div>
                 <div className="jam-body">
                     <div className="jam-hero">
-                        <div className="jam-hero-icon">{I.jam}</div>
+                        <div className="jam-hero-icon">{Icons.jam}</div>
                         <h2 className="jam-hero-title">Start a new Jam</h2>
                         <p className="jam-hero-desc">Sync playback and share your queue with friends in real-time.</p>
                     </div>
@@ -67,7 +67,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     >
                         Join Session
                     </button>
-                    {j.error && <div className="jam-error">{I.warn} {j.error}</div>}
+                    {j.error && <div className="jam-error">{Icons.warn} {j.error}</div>}
                 </div>
             </div>
     )
@@ -95,11 +95,11 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </div>
             {canEdit && (
                 <div className="jam-controls">
-                    <button className="jam-ctrl-btn" onClick={j.prev}>{I.prev}</button>
+                    <button className="jam-ctrl-btn" onClick={j.prev}>{Icons.prev}</button>
                     <button className="jam-ctrl-btn main" onClick={j.isPlaying ? j.pause : j.play}>
-                        {j.isPlaying ? I.pause : I.play}
+                        {j.isPlaying ? Icons.pause : Icons.play}
                     </button>
-                    <button className="jam-ctrl-btn" onClick={j.next}>{I.next}</button>
+                    <button className="jam-ctrl-btn" onClick={j.next}>{Icons.next}</button>
                 </div>
             )}
         </div>
@@ -107,7 +107,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     const renderSessionSettings = () => (
         <div className="jam-section-card">
-            <div className="jam-section-title">{I.settings} SESSION SETTINGS</div>
+            <div className="jam-section-title">{Icons.settings} SESSION SETTINGS</div>
             <div className="jam-setting-row">
                 <span>Guest Playback Controls</span>
                 <button 
@@ -131,7 +131,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="jam-share-row">
                 <button className="jam-btn outline flex-1"
                     onClick={() => copy(j.jamId, 'Copied invite code!')}>
-                    {I.copy} Copy Code
+                    {Icons.copy} Copy Code
                 </button>
             </div>
         </div>
@@ -139,7 +139,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     const renderQueue = () => j.queue.length > 0 ? (
         <div className="jam-section-card">
-            <div className="jam-section-title">{I.queue} UP NEXT · {j.queue.length}</div>
+            <div className="jam-section-title">{Icons.queue} UP NEXT · {j.queue.length}</div>
             {j.queue.map((t, i) => (
                 <div
                     key={`${t.uri}-${i}`}
@@ -150,7 +150,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     onDrop={() => { if (dragIdx !== null && dragIdx !== i) j.moveInQueue(dragIdx, i); setDragIdx(null); setDragOverIdx(null); }}
                     onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
                 >
-                    {canEdit && <div className="jam-drag-grip">{I.drag}</div>}
+                    {canEdit && <div className="jam-drag-grip">{Icons.drag}</div>}
                     <div className="jam-q-num">{i + 1}</div>
                     <div className="jam-q-thumb">
                         {t.artUrl
@@ -163,8 +163,8 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     </div>
                     {canEdit && (
                         <div className="jam-q-btns">
-                            <button className="jam-q-btn green" title="Play now" onClick={() => j.jumpToTrack(t.uri!)}>{I.playItem}</button>
-                            <button className="jam-q-btn red" title="Remove" onClick={() => j.removeFromQueue(t.uri!, t.uid)}>{I.close}</button>
+                            <button className="jam-q-btn green" title="Play now" onClick={() => j.jumpToTrack(t.uri!)}>{Icons.playItem}</button>
+                            <button className="jam-q-btn red" title="Remove" onClick={() => j.removeFromQueue(t.uri!, t.uid)}>{Icons.close}</button>
                         </div>
                     )}
                 </div>
@@ -174,7 +174,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     const renderMembers = () => (
         <div className="jam-section-card">
-            <div className="jam-section-title">{I.people} LISTENERS · {j.members.length}</div>
+            <div className="jam-section-title">{Icons.people} LISTENERS · {j.members.length}</div>
             {j.members.map((m, i) => (
                 <div key={m.id + i} className="jam-member-row">
                     <div className="jam-avatar" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
@@ -189,7 +189,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     {j.isHost && !m.isHost && (
                         <button 
                           className="jam-icon-btn small red"
-                          onClick={() => j.kickMember(m.id)}>{I.kick}
+                          onClick={() => j.kickMember(m.id)}>{Icons.kick}
                           aria-label={`Kick ${m.name}`}
                           </button>
                     )}
@@ -206,7 +206,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 </button>
             )}
             <button className="jam-btn red full" onClick={j.leaveJam}>
-                {I.leave} {j.isHost ? 'End Jam' : 'Leave Jam'}
+                {Icons.leave} {j.isHost ? 'End Jam' : 'Leave Jam'}
             </button>
         </div>
     )
@@ -217,7 +217,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="jam-root">
                 <div className="jam-header">
                     <div className="jam-header-left">
-                        <div className="jam-logo-icon active">{I.jam}</div>
+                        <div className="jam-logo-icon active">{Icons.jam}</div>
                         <div>
                             <div className="jam-title">Sync Party</div>
                             <div className="jam-subtitle">
@@ -235,7 +235,7 @@ const JamMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                 {j.ping < 0 ? '…' : `${j.ping}ms`}
                             </span>
                         )}
-                        <button className="jam-icon-btn" onClick={onClose}>{I.close}</button>
+                        <button className="jam-icon-btn" onClick={onClose}>{Icons.close}</button>
                     </div>
                 </div>
 
