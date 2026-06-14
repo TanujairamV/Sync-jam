@@ -155,8 +155,19 @@ export const handlePlay = async (d: any, deps: MessageHandlerDeps) => {
                 ;(Spicetify as any).Player.seek(predicted)
             }
 
-            deps.setIsPlaying(true)
-            if (!(Spicetify as any).Player.isPlaying()) (Spicetify as any).Player.play()
+            deps.setIsPlaying(!d.paused)
+
+            if (d.paused) {
+                if ((Spicetify as any).Player.isPlaying()) {
+                    (Spicetify as any).Player.pause()
+                }
+
+            } else {
+                if (!(Spicetify as any).Player.isPlaying()) {
+                    (Spicetify as any).Player.play()
+                }
+            }
+
         } else {
             r.ignoreSync = true
             deps.setIsPlaying(true)
@@ -240,6 +251,8 @@ export const handleSync = async (
         deps.refs.current.isHost &&
         (Spicetify as any).Player.data?.item
     ) {
+
+/*
         conn.send({
             type: 'PLAY',
             uri: (Spicetify as any).Player.data.item.uri,
@@ -248,6 +261,7 @@ export const handleSync = async (
             np: getTrack(),
             paused: !(Spicetify as any).Player.isPlaying()
         })
+*/
 
         conn.send({
             type: 'Q',
