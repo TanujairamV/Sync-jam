@@ -41,6 +41,22 @@ type MessageHandlerDeps = {
     pendingQueueRestore: RefCurrent<TrackInfo[]>
 }
 
+const consumeQueue = (
+    uri: string,
+    deps: MessageHandlerDeps
+) => {
+    const idx = deps.queueRef.current.findIndex(
+        (t: any) => t.uri === uri
+    )
+
+    if (idx < 0) return
+
+    const q = deps.queueRef.current.slice(idx + 1)
+
+    deps.queueRef.current = q
+    deps.setQueue(q)
+}
+
 export const handleJoin = async (d: any, conn: JamConnection, deps: MessageHandlerDeps) => {
     const r = deps.refs.current
     if (!r.isHost) return
@@ -75,7 +91,22 @@ export const handleInit = (d: any, deps: MessageHandlerDeps) => {
         deps.setNowPlaying(d.np)
         deps.refs.current.targetUri = d.np.uri
     }
-    if (d.queue) deps.setQueue(d.queue)
+
+    if (d.queue) {
+        let q = d.queue
+
+        if (d.np?.uri) {
+            const idx = q.findIndex(
+                (t: any) => t.uri === d.np.uri
+            )
+            if (idx >= 0) {
+                q = q.slice(idx + 1)
+            }
+        }
+        deps.queueRef.current = q
+        deps.setQueue(q)
+    }
+
     if (d.host) deps.setHostName(d.host)
     if (d.members) deps.setMembers(d.members)
     if (d.gc !== undefined) deps.setGuestControls(d.gc)
@@ -103,13 +134,9 @@ export const handleCmd = (d: any, conn: JamConnection, deps: MessageHandlerDeps)
     else if (d.a === 'back') (Spicetify as any).Player.back()
     else if (d.a === 'seek') (Spicetify as any).Player.seek(d.pos)
     else if (d.a === 'playuri') {
-        const idx = deps.queueRef.current.findIndex((t: any) => t.uri === d.uri)
-        if (idx >= 0) {
-            deps.pendingQueueRestore.current = deps.queueRef.current.slice(idx + 1)
-            const newQueue = deps.queueRef.current.slice(idx + 1)
-            deps.setQueue(newQueue)
-            deps.broadcast({ type: 'Q', queue: newQueue })
-        }
+        consumeQueue(d.uri, deps)
+        deps.pendingQueueRestore.current = deps.queueRef.current
+        deps.broadcast({ type: 'Q', queue: deps.queueRef.current })
         deps.refs.current.targetUri = d.uri
         ;(Spicetify as any).Player.playUri(d.uri)
     }
@@ -133,8 +160,14 @@ export const handlePlay = async (d: any, deps: MessageHandlerDeps) => {
     if (!r.isHost) {
         const curUri = (Spicetify as any).Player.data?.item?.uri
         const trackChanged = curUri !== d.uri
+
         r.targetUri = d.uri
-        if (trackChanged) deps.setProgress(0)
+        
+        if (trackChanged) {
+            deps.setProgress(0)
+            consumeQueue(d.uri, deps)
+        }
+        
         if (d.paused) {
             if (trackChanged) {
                 r.ignoreSync = true
@@ -230,7 +263,11 @@ export const handleRmQ = (d: any, deps: MessageHandlerDeps) => {
     if (deps.refs.current.isHost) deps.removeFromQueue(d.uri, d.uid)
 }
 
-export const handleQ = (d: any, deps: MessageHandlerDeps) => {
+export const handleQ = (
+    d: any,
+    deps: MessageHandlerDeps
+) => {
+    deps.queueRef.current = d.queue
     deps.setQueue(d.queue)
 }
 

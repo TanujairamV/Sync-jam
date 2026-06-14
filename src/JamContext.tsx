@@ -126,6 +126,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const u = [...p]
             const [m] = u.splice(from, 1)
             u.splice(to, 0, m)
+            queueRef.current = u
             broadcast({ type: 'Q', queue: u })
             return u
         })
@@ -141,22 +142,32 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [broadcast, hostConn])
 
+    const consumeLocalQueue = useCallback(
+        (uri: string) => {
+            const idx = queueRef.current.findIndex(t => t.uri === uri)
+
+            if (idx < 0) return
+            const q = queueRef.current.slice(idx + 1)
+            pendingQueueRestore.current = q
+            queueRef.current = q
+            setQueue(q)
+            broadcast({
+                type: "Q",
+                queue: q
+            })
+        },[broadcast]
+    )
+
     const jumpToTrack = useCallback((uri: string) => {
         if (refs.current.isHost) {
             refs.current.targetUri = uri
-            const idx = queueRef.current.findIndex(t => t.uri === uri)
-            if (idx >= 0) {
-                pendingQueueRestore.current = queueRef.current.slice(idx + 1)
-                const newQueue = queueRef.current.slice(idx + 1)
-                setQueue(newQueue)
-                broadcast({ type: 'Q', queue: newQueue })
-            }
+            consumeLocalQueue(uri)
             Spicetify.Player.playUri(uri)
         } else if (refs.current.guestControls) {
             const c = hostConn()
             if (c?.open) c.send({ type: 'CMD', a: 'playuri', uri })
         }
-    }, [hostConn, broadcast])
+    }, [hostConn, consumeLocalQueue])
 
     const toggleGuestControls = () => {
         if (!refs.current.isHost) return
@@ -168,7 +179,6 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const play = () => {
         if (refs.current.isHost) {
             Spicetify.Player.play()
-            setIsPlaying(true)
         } else if (refs.current.guestControls) {
             const c = hostConn()
             if (c?.open) c.send({ type: 'CMD', a: 'play' })
@@ -178,7 +188,6 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const pause = () => {
         if (refs.current.isHost) {
             Spicetify.Player.pause()
-            setIsPlaying(false)
             
         } else if (refs.current.guestControls) {
             const c = hostConn()
@@ -360,9 +369,11 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const id = setInterval(() => {
             if (refs.current.isHost) {
                 try {
-                    setIsPlaying(Spicetify.Player.isPlaying())
                     setProgress(Spicetify.Player.getProgress())
-                    setDuration(Spicetify.Player.getDuration())
+                    const d = Spicetify.Player.getDuration()
+                    if (d !== duration) {
+                        setDuration(d)
+                    }
                 } catch {}
             } else if (refs.current.connected) {
                 try {
@@ -429,7 +440,14 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     if (t) setNowPlaying(t)
                     refs.current.targetUri = uri || null
                     const hostPaused = !Spicetify.Player.isPlaying()
-                    broadcast({ type: 'PLAY', uri: uri || '', pos: 0, ts: Date.now(), np: t, paused: hostPaused })
+                    broadcast({
+                        type: 'PLAY',
+                        uri: uri || '',
+                        pos: Spicetify.Player.getProgress(),
+                        ts: Date.now(),
+                        np: t,
+                        paused: hostPaused
+                    })
                     if (pendingQueueRestore.current.length > 0) {
                         const restore = pendingQueueRestore.current
                         pendingQueueRestore.current = [];
@@ -484,14 +502,19 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (refs.current.isHost) {
                 const pos = Spicetify.Player.getProgress()
                 const dur = Spicetify.Player.getDuration()
-                broadcast({ type: 'PS', p: playing, pos, dur })
-                if (playing) {
-                    broadcast({ type: 'PLAY', uri: refs.current.targetUri || '', pos, ts: Date.now(), np: getTrack(), paused: false })
-                } else {
-                    broadcast({ 
-                        type: 'PAUSE' ,
-                        pos: Spicetify.Player.getProgress(),
-                        ts: Date.now() 
+
+                broadcast({
+                    type: 'PS',
+                    p: playing,
+                    pos,
+                    dur 
+                })
+
+                if (!playing) {
+                    broadcast({
+                        type: 'PAUSE',
+                        pos,
+                        ts: Date.now()
                     })
                 }
 
@@ -595,4 +618,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     )
 }
 
-export const useJam = () => { const c = useContext(Ctx); if (!c) throw new Error('useJam must be inside JamProvider'); return c }
+export const useJam = () => {
+    const c = useContext(Ctx);
+    if (!c) throw new Error('useJam must be inside JamProvider');
+    return c }
