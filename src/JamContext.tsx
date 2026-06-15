@@ -29,9 +29,10 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const memberRegistry = useRef<Map<string, { name: string; image: string }>>(new Map())
     const cachedUser = useRef<{ name: string; image: string }>({ name: 'Listener', image: '' })
     const userPromise = useRef<{ then: (onfulfilled: (value: { name: string; image: string }) => any) => any } | null>(null)
-    const refs = useRef({ isHost: false, connected: false, guestControls: false, jamId: '', targetUri: null as string | null, ignoreSync: false, isPlaying: false, forcingPause: false })
+    const refs = useRef({ isHost: false, connected: false, guestControls: false, jamId: '', targetUri: null as string | null, ignoreUntil: 0, ignoreSync: false, isPlaying: false, forcingPause: false })
     const cmdThrottle = useRef<Map<string, number>>(new Map())
     const lastHostMsg = useRef(0)
+    const lastPlayBroadcast = useRef({ uri: "", time: 0 })
     const reconnectAttempt = useRef(0)
     const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const songDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -39,6 +40,22 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const ctxMenuItem = useRef<any>(null)
     const pendingQueueRestore = useRef<TrackInfo[]>([])
     const queueRef = useRef<TrackInfo[]>([])
+    const clockOffset = useRef(0)
+    const clockRtt = useRef(0)
+    const clockConfidence = useRef(0)
+    const pendingClockSync = useRef(
+        new Map<
+            string,
+            {
+                t0: number
+            }
+        >()
+    )
+    const lastSyncRequest = useRef(0)
+
+    const hostNow = useCallback(() => {
+    return Date.now() + clockOffset.current
+}, [])
 
     useEffect(() => { queueRef.current = queue }, [queue])
     useEffect(() => { refs.current.isHost = isHost }, [isHost])
@@ -122,7 +139,16 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const seekTo = useCallback((ms: number) => {
         if (refs.current.isHost) {
             Spicetify.Player.seek(ms)
-            broadcast({ type: 'SEEK', pos: ms, ts: Date.now() })
+
+            setTimeout(() => {
+                broadcast(
+                    {
+                        type: 'SEEK',
+                        pos: Spicetify.Player.getProgress(),
+                        ts: Date.now(),
+                        paused: !Spicetify.Player.isPlaying()
+                    })
+            },50)
         } else if (refs.current.guestControls) {
             const c = hostConn()
             if (c?.open) c.send({ type: 'CMD', a: 'seek', pos: ms })
@@ -149,7 +175,17 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (refs.current.isHost) {
             refs.current.targetUri = uri
             consumeLocalQueue(uri)
+            
+            refs.current.ignoreUntil = Date.now() + 600
+            
             Spicetify.Player.playUri(uri)
+            .then(() => {
+                refs.current.ignoreUntil = 0
+            })
+            .catch(() => {
+                refs.current.ignoreUntil = 0
+                
+            })
         } else if (refs.current.guestControls) {
             const c = hostConn()
             if (c?.open) c.send({ type: 'CMD', a: 'playuri', uri })
@@ -166,6 +202,16 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const play = () => {
         if (refs.current.isHost) {
             Spicetify.Player.play()
+
+            setTimeout(() => {
+                broadcast({
+                    type: "PS",
+                    p: true,
+                    pos: Spicetify.Player.getProgress(),
+                    dur: Spicetify.Player.getDuration(),
+                ts: Date.now()
+            })
+            },50)
         } else if (refs.current.guestControls) {
             const c = hostConn()
             if (c?.open) c.send({ type: 'CMD', a: 'play' })
@@ -176,6 +222,15 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (refs.current.isHost) {
             Spicetify.Player.pause()
 
+            setTimeout(() => {
+                broadcast({
+                    type: "PS",
+                    p: false,
+                    pos: Spicetify.Player.getProgress(),
+                    dur: Spicetify.Player.getDuration(),
+                ts: Date.now()
+            })
+            },50)
         } else if (refs.current.guestControls) {
             const c = hostConn()
             if (c?.open) c.send({ type: 'CMD', a: 'pause' })
@@ -211,13 +266,17 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         memberRegistry.current.clear()
         peerRef.current?.destroy()
         peerRef.current = null
+        clockOffset.current = 0
+        clockRtt.current = 0
+        clockConfidence.current = 0
+        pendingClockSync.current.clear()
         setConnected(false)
         setJamId('')
         setIsHost(false)
         refs.current.isHost = false
         refs.current.connected = false
         refs.current.guestControls = false
-        refs.current.ignoreSync = false
+        refs.current.ignoreUntil = 0
         refs.current.forcingPause = false
         refs.current.targetUri = null
         setMembers([])
@@ -272,7 +331,11 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             leaveJam,
             cmdThrottle,
             queueRef,
-            pendingQueueRestore
+            pendingQueueRestore,
+            pendingClockSync,
+            clockOffset,
+            clockRtt,
+            clockConfidence
         })
     }, [buildMembers, addToQueue, removeFromQueue, broadcast, leaveJam])
 
@@ -283,6 +346,14 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
 
         conn.onOpen(() => {
+            if (reconnectTimer.current) {
+                clearTimeout(reconnectTimer.current)
+                reconnectTimer.current = null
+            }
+
+            reconnectAttempt.current = 0
+            lastHostMsg.current = Date.now()
+
             if (refs.current.isHost) {
                 setMembers(buildMembers())
             } else {
@@ -368,11 +439,33 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     setDuration(Spicetify.Player.getDuration())
                 } catch { }
                 const c = hostConn()
-                if (c?.open) c.send({ type: 'PING', ts: Date.now() })
+                if (c?.open) {
+                    c.send({
+                        type: "PING",
+                        t0: Date.now()
+                    })
+
+                    const id = Math.random().toString(36).slice(2)
+                    const t0 = Date.now()
+
+                    pendingClockSync.current.set(id, {
+                        t0
+                    })
+
+                    c.send({ type: 'TS_REQ',id, t0 })
+                }
+
                 if (lastHostMsg.current > 0 && Date.now() - lastHostMsg.current > 10000) {
+                    clockOffset.current = 0
+                    clockRtt.current = 0
+                    clockConfidence.current = 0
+                    pendingClockSync.current.clear()
                     setError('Connection lost - trying to reconnect...')
                     lastHostMsg.current = 0
-                    if (reconnectAttempt.current < 3) {
+                    if (
+                        !reconnectTimer.current &&
+                        reconnectAttempt.current < 3
+                    ) {
                         reconnectAttempt.current++
                         reconnectTimer.current = setTimeout(() => {
                             if (!peerRef.current || !refs.current.jamId) return
@@ -393,8 +486,12 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 try {
                     const localPlaying = Spicetify.Player.isPlaying()
                     if (localPlaying !== refs.current.isPlaying && !refs.current.isHost) {
-                        const c = hostConn()
-                        if (c?.open) c.send({ type: 'SYNC' })
+                        const now = Date.now()
+                        if (now - lastSyncRequest.current > 3000) {
+                            lastSyncRequest.current = now
+                            const c = hostConn()
+                            if (c?.open) c.send({ type: 'SYNC' })
+                        }
                     }
                 } catch { }
             }
@@ -414,6 +511,17 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (songDebounce.current) clearTimeout(songDebounce.current)
             songDebounce.current = setTimeout(() => {
                 const uri = Spicetify.Player.data?.item?.uri
+
+                const now = Date.now()
+
+                if (
+                    uri === lastPlayBroadcast.current.uri &&
+                    now - lastPlayBroadcast.current.time < 500
+                ) {
+                    return
+                }
+                lastPlayBroadcast.current = { uri: uri || '', time: now }
+
                 if (refs.current.isHost) {
                     console.log('[HOST] Song change',
                         {
@@ -444,14 +552,13 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                     try { await Spicetify.addToQueue([{ uri: tr.uri }]) } catch { }
                                 }
                             }
-                            setTimeout(refreshQueue, 1000)
+                            setTimeout(refreshQueue, 700)
                         })()
                     } else {
-                        setTimeout(refreshQueue, 600)
+                        setTimeout(refreshQueue, 400)
                     }
                 } else {
-                    if (refs.current.ignoreSync) {
-                        refs.current.ignoreSync = false
+                    if (Date.now() < refs.current.ignoreUntil) {
                         return
                     }
 
@@ -467,20 +574,21 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                     time: Date.now()
                                 }
                             )
-                            refs.current.ignoreSync = true
-                            Spicetify.Player.playUri(refs.current.targetUri).catch(() => {
-                                refs.current.ignoreSync = false
+                            refs.current.ignoreUntil=Date.now()+400
+                            
+                            Spicetify.Player.playUri(refs.current.targetUri
+                            ).catch(() => {
+                                refs.current.ignoreUntil = 0
                             })
                             Spicetify.showNotification('🔒 Locked to Jam')
                         }
                     }
                 }
-            }, 300)
+            }, 75)
         }
 
         const onPP = () => {
-            if (refs.current.ignoreSync) {
-                refs.current.ignoreSync = false
+            if (Date.now() < refs.current.ignoreUntil) {
                 return
             }
 
@@ -494,14 +602,15 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     type: 'PS',
                     p: playing,
                     pos,
-                    dur
+                    dur,
+                    ts: Date.now()
                 })
 
                 if (!playing) {
                     const currentUri = Spicetify.Player.data?.item?.uri
                     if (
                         currentUri &&
-                        currentUri === refs.current.targerUri
+                        currentUri === refs.current.targetUri
                     ) {
                         broadcast({
                             type: 'PAUSE',
@@ -520,7 +629,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         Spicetify.Player.pause()
                         Spicetify.showNotification('🔒 Only the host can resume playback')
 
-                        setTimeout(() => { refs.current.forcingPause = false }, 500)
+                        setTimeout(() => { refs.current.forcingPause = false }, 300)
 
                         const c = hostConn()
                         if (c?.open) {
@@ -543,11 +652,11 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             curUri &&
                             curUri !== refs.current.targetUri
                         ) {
-                            refs.current.ignoreSync = true
+                            refs.current.ignoreUntil=Date.now()+400
 
                             Spicetify.Player.playUri(
                                 refs.current.targetUri).catch(() => {
-                                    refs.current.ignoreSync = false
+                                    refs.current.ignoreUntil = 0
                                 })
                             Spicetify.showNotification('🔒 Locked to Jam')
                         }
@@ -566,11 +675,11 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         Spicetify.Player.addEventListener('songchange', onSong)
         Spicetify.Player.addEventListener('onplaypause', onPP)
-        let qi: ReturnType<typeof setInterval> | null = refs.current.isHost ? setInterval(refreshQueue, 5000) : null
+        let qi: ReturnType<typeof setInterval> | null = refs.current.isHost ? setInterval(refreshQueue, 8000) : null
         let driftI: ReturnType<typeof setInterval> | null = !refs.current.isHost ? setInterval(() => {
             const c = hostConn()
             if (c?.open) c.send({ type: 'SYNC' })
-        }, 15000) : null
+        }, 10000) : null
         try {
             if (ctxMenuItem.current) { try { ctxMenuItem.current.deregister() } catch { } }
             ctxMenuItem.current = new (Spicetify as any).ContextMenu.Item(

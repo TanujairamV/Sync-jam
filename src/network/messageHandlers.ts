@@ -1,7 +1,7 @@
 import { JamConnection } from '../types/types'
 import { TrackInfo, Member } from '../types/jam'
 import { getTrack, getQueue } from '../spotify/api'
-import { calculateDrift, predictPosition, shouldHardSeek } from "../utils/sync"
+import { calculateDrift, predictPosition, getDriftState} from "../utils/sync"
 
 type RefCurrent<T> = { current: T }
 
@@ -39,6 +39,10 @@ type MessageHandlerDeps = {
     cmdThrottle: RefCurrent<Map<string, number>>
     queueRef: RefCurrent<TrackInfo[]>
     pendingQueueRestore: RefCurrent<TrackInfo[]>
+    pendingClockSync: RefCurrent<Map<string, { t0: number }>>
+    clockOffset: RefCurrent<number>
+    clockRtt: RefCurrent<number>
+    clockConfidence: RefCurrent<number>
 }
 
 const consumeQueue = (
@@ -142,7 +146,7 @@ export const handleCmd = (d: any, conn: JamConnection, deps: MessageHandlerDeps)
     }
 }
 
-export const handleKick = (d: any, deps: MessageHandlerDeps) => {
+export const handleKick = (_d: any, deps: MessageHandlerDeps) => {
     deps.leaveJam()
     deps.setError('Removed from Jam');
     (Spicetify as any).showNotification('Kicked from Jam')
@@ -168,6 +172,7 @@ export const handlePlay = async (d: any, deps: MessageHandlerDeps) => {
             consumeQueue(d.uri, deps)
         }
 
+
         if (d.paused) {
             if (trackChanged) {
                 r.ignoreSync = true
@@ -180,25 +185,29 @@ export const handlePlay = async (d: any, deps: MessageHandlerDeps) => {
                 deps.setIsPlaying(false)
             }
         } else if (!trackChanged) {
-            const predicted = predictPosition(d.pos, d.ts, !d.paused)
+            const predicted = predictPosition(
+                d.pos,
+                d.ts + (
+                    deps.clockConfidence.current >= 3
+                    ? deps.clockOffset.current
+                    : 0
+                ),
+                !d.paused
+            )
             const localProgress = (Spicetify as any).Player.getProgress()
             const drift = calculateDrift(localProgress, predicted)
 
-            if (shouldHardSeek(drift)) {
-                ; (Spicetify as any).Player.seek(predicted)
-            }
-
-            deps.setIsPlaying(!d.paused)
-
-            if (d.paused) {
-                if ((Spicetify as any).Player.isPlaying()) {
-                    (Spicetify as any).Player.pause()
-                }
-
-            } else {
-                if (!(Spicetify as any).Player.isPlaying()) {
-                    (Spicetify as any).Player.play()
-                }
+            switch (getDriftState(drift)) {
+                case "ignore":
+                    break
+                case "soft":
+                    if (Math.abs(drift) > 250) {
+                        ;(Spicetify as any).Player.seek(predicted)
+                    }
+                    break
+                case "hard":
+                    ; (Spicetify as any).Player.seek(predicted)
+                    break
             }
 
         } else {
@@ -206,18 +215,40 @@ export const handlePlay = async (d: any, deps: MessageHandlerDeps) => {
             deps.setIsPlaying(true)
                 ; (Spicetify as any).Player.playUri(d.uri)
                     .then(() => {
-                        const seekMs = predictPosition(d.pos, d.ts, !d.paused)
+                        const seekMs = predictPosition(
+                            d.pos,
+                            d.ts + (
+                                deps.clockConfidence.current >= 3
+                                ? deps.clockOffset.current
+                                : 0
+                            ),
+                            !d.paused
+                        )
                         const sid = setTimeout(() => {
                             try {
                                 const current = (Spicetify as any).Player.getProgress()
                                 const drift = calculateDrift(current, seekMs)
-                                if (shouldHardSeek(drift)) {
-                                    ; (Spicetify as any).Player.seek(seekMs)
-                                }
+
+                                switch (getDriftState(drift)) {
+                                    case "ignore":
+                                        break
+                                    case "soft":
+                                        if (Math.abs(drift) > 250) {
+                                            ; (Spicetify as any).Player.seek(seekMs)
+                                        }
+                                        break
+                                    case "hard":
+                                        ; (Spicetify as any).Player.seek(seekMs)
+                                        break
+                                }        
                             } finally {
                                 r.ignoreSync = false
                             }
-                        }, Math.max(300, Date.now() - d.ts))
+                        }, Math.max(
+                            50,
+                            Math.min(150, Date.now() - d.ts)
+                        )
+                        )
                         deps.seekTimers.current.push(sid)
                     })
                     .catch(() => {
@@ -228,7 +259,7 @@ export const handlePlay = async (d: any, deps: MessageHandlerDeps) => {
     if (d.np) deps.setNowPlaying(d.np)
 }
 
-export const handlePause = (d: any, deps: MessageHandlerDeps) => {
+export const handlePause = (_d: any, deps: MessageHandlerDeps) => {
     if (!deps.refs.current.isHost) {
         ; (Spicetify as any).Player.pause()
         deps.setIsPlaying(false)
@@ -237,12 +268,29 @@ export const handlePause = (d: any, deps: MessageHandlerDeps) => {
 
 export const handleSeek = (d: any, deps: MessageHandlerDeps) => {
     if (!deps.refs.current.isHost) {
-        const predicted = predictPosition(d.pos, d.ts, !d.paused)
-        const localProgress = (Spicetify as any).Player.getProgress()
-        const drift = calculateDrift(localProgress, predicted)
+        const predicted = predictPosition(
+            d.pos,
+            d.ts + (
+                deps.clockConfidence.current >= 3
+                ? deps.clockOffset.current
+                : 0
+            ),
+            !d.paused
+        )
+        const local = (Spicetify as any).Player.getProgress()
+        const drift = calculateDrift(local, predicted)
 
-        if (shouldHardSeek(drift)) {
-            ; (Spicetify as any).Player.seek(predicted)
+        switch (getDriftState(drift)) {
+            case "ignore":
+                break
+            case "soft":
+                if (Math.abs(drift) > 250) {
+                    Spicetify.Player.seek(predicted)
+                }
+                break
+            case "hard":
+                Spicetify.Player.seek(predicted)
+                break
         }
     }
 }
@@ -271,16 +319,58 @@ export const handleQ = (
     deps.setQueue(d.queue)
 }
 
-export const handlePing = (d: any, conn: JamConnection, deps: MessageHandlerDeps) => {
-    conn.send({ type: 'PONG', ts: d.ts })
+export const handleTsReq = (
+    d: any,
+    conn: JamConnection,
+    deps: MessageHandlerDeps
+) => {
+    if (!deps.refs.current.isHost)
+        return
+
+    conn.send({
+        type: "TS_RESP",
+        id: d.id,
+        t0: d.t0,
+        t1: Date.now()
+    })
+}
+
+export const handleTsResp = (
+    d: any,
+    deps: MessageHandlerDeps
+) => {
+    const pending =
+        deps.pendingClockSync.current.get(d.id)
+
+    if (!pending)
+        return
+
+    deps.pendingClockSync.current.delete(d.id)
+
+    const t3 = Date.now()
+    const rtt = t3 - pending.t0
+
+    const offset =
+        d.t1 - (pending.t0 + rtt / 2)
+
+    if (
+        deps.clockConfidence.current === 8 ||
+        rtt < deps.clockRtt.current
+    ) {
+        deps.clockOffset.current = offset
+        deps.clockRtt.current = rtt
+        if (deps.clockConfidence.current < 8) {
+            deps.clockConfidence.current++
+        }
+    }
 }
 
 export const handlePong = (d: any, deps: MessageHandlerDeps) => {
-    deps.setPing(Date.now() - d.ts)
+    deps.setPing(Date.now() - d.t0)
 }
 
 export const handleSync = async (
-    d: any,
+    _d: any,
     conn: JamConnection,
     deps: MessageHandlerDeps
 ) => {
@@ -324,7 +414,8 @@ export const onData = async (d: any, conn: JamConnection, deps: MessageHandlerDe
         case 'ADD_Q': return handleAddQ(d, deps)
         case 'RM_Q': return handleRmQ(d, deps)
         case 'Q': return handleQ(d, deps)
-        case 'PING': return handlePing(d, conn, deps)
+        case 'TS_REQ': return handleTsReq(d, conn, deps)
+        case 'TS_RESP': return handleTsResp(d, deps)
         case 'PONG': return handlePong(d, deps)
         case 'SYNC': return await handleSync(d, conn, deps)
     }
