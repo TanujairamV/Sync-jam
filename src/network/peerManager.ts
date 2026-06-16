@@ -151,9 +151,7 @@ export const joinJam = async (params: {
 
     return manager
 } catch (error) {
-    params.setError('Failed to join room. Please try again.')
-    console.error('[GUEST] Failed to join room:', error)
-    return
+    params.setError('Failed to join room. Check your Room Id')
+    throw error
 }
-
 }

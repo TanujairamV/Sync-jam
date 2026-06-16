@@ -77,8 +77,9 @@ export const getQueue = async (): Promise<TrackInfo[]> => {
         } catch {}
 
         if (!tracks || tracks.length === 0) {
-            if (Spicetify.Player?.data?.next_tracks) {
-                tracks = Spicetify.Player.data.next_tracks
+            const playerData = Spicetify.Player.data as any
+            if (playerData?.next_tracks) {
+                tracks = playerData.next_tracks
             }
         }
 

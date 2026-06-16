@@ -367,7 +367,7 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
     }, [onData, buildMembers])
 
-    const startJam = useCallback(async (retries = 0) => {
+    const startJam = useCallback(async () => {
         if (refs.current.connected)
             leaveJam()
 
@@ -377,7 +377,6 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsHost(true)
         setConnected(true)
         const p = await networkStartJam({
-            retries,
             userPromise,
             cachedUser,
             setJamId,
