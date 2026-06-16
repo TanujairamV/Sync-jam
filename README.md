@@ -31,6 +31,16 @@
 
 # Installation
 
+## ⭐ Spicetify Marketplace (Recommended)
+
+1. Open the Marketplace.
+2. Search for **Sync Party**.
+3. Click **Install**.
+4. Restart Spotify.
+
+<details>
+<summary><b>🛠 Manual Installation</b></summary>
+
 ## Prerequisites
 
 * Spotify Desktop
@@ -67,6 +77,7 @@ npm run build
 spicetify config extensions syncparty.js
 spicetify apply
 ```
+</details>
 
 ---
 
