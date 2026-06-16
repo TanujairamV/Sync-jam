@@ -47,7 +47,6 @@ export const setupConn = (
 }
 
 export const startJam = async (params: {
-    retries?: number
     userPromise: AsyncValueRef<{ name: string; image: string }>
     cachedUser: UserRef
     setJamId: Setter<string>
@@ -63,7 +62,6 @@ export const startJam = async (params: {
     refreshQueue: () => any
     setupConn: SetupConnFn
 }) => {
-    const retries = params.retries || 0
     const me = await (params.userPromise.current || fetchUserAsync())
     params.cachedUser.current = me
 
@@ -132,15 +130,16 @@ export const joinJam = async (params: {
     console.log('[GUEST] User:', me.name)
     console.log('[GUEST] Room ID:', cleanId)
 
-    const manager = await joinHost(cleanId, params.setupConn)
+    try {
+        const manager = await joinHost(cleanId, params.setupConn)
 
-    params.setJamId(cleanId)
-    params.setIsHost(false)
-    params.setError(null)
-    params.setMembers([
-        {
-            id: cleanId,
-            name: 'Host',
+        params.setJamId(cleanId)
+        params.setIsHost(false)
+        params.setError(null)
+        params.setMembers([
+            {
+                id: cleanId,
+                name: 'Host',
             isHost: true
         },
         {
@@ -151,4 +150,10 @@ export const joinJam = async (params: {
     ])
 
     return manager
+} catch (error) {
+    params.setError('Failed to join room. Please try again.')
+    console.error('[GUEST] Failed to join room:', error)
+    return
+}
+
 }

@@ -53,9 +53,6 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     )
     const lastSyncRequest = useRef(0)
 
-    const hostNow = useCallback(() => {
-    return Date.now() + clockOffset.current
-}, [])
 
     useEffect(() => { queueRef.current = queue }, [queue])
     useEffect(() => { refs.current.isHost = isHost }, [isHost])
@@ -588,7 +585,9 @@ export const JamProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         const onPP = () => {
-            if (Date.now() < refs.current.ignoreUntil) {
+            if (refs.current.ignoreUntil ||
+                Date.now() < refs.current.ignoreUntil
+            ) {
                 return
             }
 

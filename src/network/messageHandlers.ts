@@ -298,6 +298,17 @@ export const handleSeek = (d: any, deps: MessageHandlerDeps) => {
 export const handlePs = (d: any, deps: MessageHandlerDeps) => {
     if (!deps.refs.current.isHost) {
         deps.setIsPlaying(d.p)
+        
+        if (d.p) {
+            if (!Spicetify.Player.isPlaying()) {
+                Spicetify.Player.play()
+            }
+        } else {
+            if (Spicetify.Player.isPlaying()) {
+                Spicetify.Player.pause()
+    }
+}
+
         if (d.pos !== undefined) deps.setProgress(d.pos)
         if (d.dur !== undefined) deps.setDuration(d.dur)
     }
@@ -379,16 +390,14 @@ export const handleSync = async (
         (Spicetify as any).Player.data?.item
     ) {
 
-        /*
-                conn.send({
-                    type: 'PLAY',
-                    uri: (Spicetify as any).Player.data.item.uri,
-                    pos: (Spicetify as any).Player.getProgress(),
-                    ts: Date.now(),
-                    np: getTrack(),
-                    paused: !(Spicetify as any).Player.isPlaying()
-                })
-        */
+        conn.send({
+            type: 'PLAY',
+            uri: (Spicetify as any).Player.data.item.uri,
+            pos: (Spicetify as any).Player.getProgress(),
+            ts: Date.now(),
+            np: getTrack(),
+            paused: !(Spicetify as any).Player.isPlaying()
+        })
 
         conn.send({
             type: 'Q',
